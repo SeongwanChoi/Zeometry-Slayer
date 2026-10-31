@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="512" viewBox="0 0 1024 512">
+<defs>
+ <filter id="glow" x="-30%" y="-50%" width="170%" height="200%"><feGaussianBlur stdDeviation="16" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+ <linearGradient id="core" x1="0" x2="1"><stop stop-color="#00a9ff"/><stop offset=".58" stop-color="#00f5d4"/><stop offset="1" stop-color="#f0ffff"/></linearGradient>
+</defs>
+<!-- swept energy trail -->
+<path d="M70 256 L390 190 L560 216 L790 256 L560 296 L390 322 Z" fill="#00dfff" opacity=".16" filter="url(#glow)"/>
+<!-- sharp forward-pointing crystalline body -->
+<path d="M125 256 L395 178 L545 220 L914 256 L545 292 L395 334 Z" fill="#04152b" fill-opacity=".82" stroke="#00f5d4" stroke-width="18" stroke-linejoin="round" filter="url(#glow)"/>
+<path d="M150 256 L404 198 L550 235 L864 256 L550 277 L404 314 Z" fill="url(#core)" opacity=".88"/>
+<path d="M158 256 L404 198 L550 235 L864 256" fill="none" stroke="#eaffff" stroke-width="7" opacity=".95"/>
+<path d="M158 256 L404 314 L550 277 L864 256" fill="none" stroke="#00f5d4" stroke-width="8" opacity=".95"/>
+<path d="M268 256 L412 224 L552 256 L412 288 Z" fill="#02122a" fill-opacity=".72" stroke="#00dfff" stroke-width="9" stroke-linejoin="round"/>
+<path d="M310 256 L424 238 L520 256 L424 274 Z" fill="#eaffff" opacity=".9"/>
+</svg>
