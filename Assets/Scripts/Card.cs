@@ -6,15 +6,29 @@ public class Card : MonoBehaviour,
     IPointerEnterHandler, IPointerExitHandler,
     IBeginDragHandler, IDragHandler, IEndDragHandler
 {
+    [Header("카드 속성 정보 (Buster / Arts / Quick 및 소유 플레이어)")]
+    [SerializeField] private string cardName = "Arts";
+    [SerializeField] private ECardColor cardColor = ECardColor.ARTS;
+    [SerializeField] private int ownerPlayerIndex = 0;
+    [SerializeField] private SelectableUnit ownerPlayerUnit;
+    [SerializeField] private int assignedStars = 0; // Attack 페이즈 시작 시 부여된 크리티컬 스타 개수 (1개당 크리티컬 확률 +10%)
+
+    [Header("카드 색상별 기본 스프라이트 (프리팹 내장 폴백)")]
+    [SerializeField] private Sprite redCardSprite;
+    [SerializeField] private Sprite blueCardSprite;
+    [SerializeField] private Sprite greenCardSprite;
+
     [Header("호버(마우스 오버) 설정")]
     [SerializeField] private float hoverScale = 1.15f;   // 마우스 올렸을 때 커지는 배율
     [SerializeField] private float hoverYOffset = 40f;   // 마우스 올렸을 때 위로 올라가는 높이
 
-    [Header("AttackBox 진입 시 색상 및 순서 표시")]
+    [Header("AttackBox 진입 시 색상, 순서 및 크리티컬 확률 표시")]
     [SerializeField] private Color normalCardColor = Color.white; // 손패에 있을 때 원래 색상 (255, 255, 255)
     [SerializeField] private Color attackBoxDarkColor = new Color32(156, 152, 152, 255); // AttackBox 안에서 어두워지는 색상 (156, 152, 152)
     [SerializeField] private Image orderNumberImage;     // 카드 위에 띄울 금색 순서 숫자 이미지 컴포넌트
     [SerializeField] private Vector2 orderNumberSize = new Vector2(68f, 68f); // 금색 숫자 이미지 크기
+    [SerializeField] private Text cardTypeLabelText;     // 카드 이름(Buster / Arts / Quick) 표시 텍스트
+    [SerializeField] private Text critStarBadgeText;     // AttackBox에서 부여된 스타/크리티컬 확률 표시 텍스트
 
     private RectTransform rectTransform;
     private CanvasGroup canvasGroup;
@@ -32,8 +46,16 @@ public class Card : MonoBehaviour,
     private bool isHovered = false;
     private bool isInitialized = false;
 
+    private static Font cachedCardFont;
+
+    public string CardName => cardColor.GetCardName();
+    public ECardColor CardColor => cardColor;
+    public int OwnerPlayerIndex { get => ownerPlayerIndex; set => ownerPlayerIndex = value; }
+    public SelectableUnit OwnerPlayerUnit { get => ownerPlayerUnit; set => ownerPlayerUnit = value; }
     public bool IsInAttackBox => isInAttackBox;
     public int SavedHandIndex { get => savedHandIndex; set => savedHandIndex = value; }
+    public int AssignedStars => assignedStars;
+    public float CriticalChancePercent => Mathf.Clamp(assignedStars * 10f, 0f, 100f);
 
     private void Awake()
     {
@@ -56,6 +78,86 @@ public class Card : MonoBehaviour,
         }
 
         EnsureOrderNumberImage();
+        EnsureCardTextElements();
+    }
+
+    /// <summary>
+    /// 카드의 소유 플레이어 정보, 카드 종류(Buster / Arts / Quick) 및 스프라이트를 갱신합니다.
+    /// </summary>
+    public void SetupCard(int playerIndex, SelectableUnit ownerUnit, ECardColor color, Sprite sprite, int initialHandIndex)
+    {
+        InitComponents();
+        ownerPlayerIndex = playerIndex;
+        ownerPlayerUnit = ownerUnit;
+        cardColor = color;
+        cardName = color.GetCardName();
+        savedHandIndex = initialHandIndex;
+        SetAssignedStars(0);
+
+        Sprite resolvedSprite = sprite != null ? sprite : GetBuiltInSprite(color);
+        if (cardImage != null)
+        {
+            if (resolvedSprite != null)
+                cardImage.sprite = resolvedSprite;
+            cardImage.color = isInAttackBox ? attackBoxDarkColor : normalCardColor;
+            cardImage.enabled = true;
+        }
+
+        RefreshCardTypeLabel();
+    }
+
+    /// <summary>
+    /// Attack 페이즈 진입 시 이 카드에 부여된 스타 개수를 설정하고 크리티컬 확률(스타 1개당 10%) UI를 갱신합니다.
+    /// </summary>
+    public void SetAssignedStars(int stars)
+    {
+        assignedStars = Mathf.Max(0, stars);
+
+        if (critStarBadgeText != null)
+        {
+            if (assignedStars > 0 && isInAttackBox)
+            {
+                int critPct = Mathf.Clamp(assignedStars * 10, 0, 100);
+                critStarBadgeText.text = $"★{assignedStars} ({critPct}%)";
+                critStarBadgeText.transform.SetAsLastSibling();
+                critStarBadgeText.gameObject.SetActive(true);
+            }
+            else
+            {
+                critStarBadgeText.gameObject.SetActive(false);
+            }
+        }
+    }
+
+    private void RefreshCardTypeLabel()
+    {
+        if (cardTypeLabelText == null) return;
+
+        cardTypeLabelText.text = cardColor.GetCardName().ToUpperInvariant();
+        switch (cardColor)
+        {
+            case ECardColor.BUSTER:
+                cardTypeLabelText.color = new Color(1f, 0.72f, 0.76f, 0.95f);
+                break;
+            case ECardColor.ARTS:
+                cardTypeLabelText.color = new Color(0.68f, 0.92f, 1f, 0.95f);
+                break;
+            case ECardColor.QUICK:
+                cardTypeLabelText.color = new Color(0.68f, 1f, 0.80f, 0.95f);
+                break;
+        }
+        cardTypeLabelText.fontSize = isInAttackBox ? 15 : 22;
+    }
+
+    public Sprite GetBuiltInSprite(ECardColor color)
+    {
+        switch (color)
+        {
+            case ECardColor.RED:   return redCardSprite != null ? redCardSprite : blueCardSprite;
+            case ECardColor.BLUE:  return blueCardSprite;
+            case ECardColor.GREEN: return greenCardSprite != null ? greenCardSprite : blueCardSprite;
+            default:               return blueCardSprite;
+        }
     }
 
     private void EnsureOrderNumberImage()
@@ -78,20 +180,109 @@ public class Card : MonoBehaviour,
             numRect.anchorMax = new Vector2(0.5f, 0.5f);
             numRect.pivot = new Vector2(0.5f, 0.5f);
             numRect.anchoredPosition = Vector2.zero;
+            numRect.localPosition = Vector3.zero;
+            numRect.localScale = Vector3.one;
             numRect.sizeDelta = orderNumberSize;
 
             orderNumberImage = numObj.GetComponent<Image>();
-            orderNumberImage.raycastTarget = false; // 숫자 이미지가 마우스 드래그/호버를 가로채지 않도록 설정
+            orderNumberImage.raycastTarget = false;
             orderNumberImage.preserveAspect = true;
             numObj.SetActive(false);
         }
+    }
+
+    private void EnsureCardTextElements()
+    {
+        if (cardTypeLabelText == null)
+        {
+            Transform lblTr = transform.Find("CardTypeLabel");
+            if (lblTr != null)
+                cardTypeLabelText = lblTr.GetComponent<Text>();
+        }
+
+        if (cardTypeLabelText == null)
+        {
+            GameObject lblObj = new GameObject("CardTypeLabel", typeof(RectTransform), typeof(CanvasRenderer), typeof(Text), typeof(Outline));
+            lblObj.layer = gameObject.layer;
+            lblObj.transform.SetParent(transform, false);
+
+            RectTransform rt = lblObj.GetComponent<RectTransform>();
+            rt.anchorMin = new Vector2(0.5f, 0f);
+            rt.anchorMax = new Vector2(0.5f, 0f);
+            rt.pivot = new Vector2(0.5f, 0f);
+            rt.anchoredPosition = new Vector2(0f, 18f);
+            rt.sizeDelta = new Vector2(150f, 32f);
+            rt.localScale = Vector3.one;
+
+            cardTypeLabelText = lblObj.GetComponent<Text>();
+            cardTypeLabelText.font = GetOrCreateCardFont();
+            cardTypeLabelText.fontSize = 22;
+            cardTypeLabelText.fontStyle = FontStyle.Bold;
+            cardTypeLabelText.alignment = TextAnchor.MiddleCenter;
+            cardTypeLabelText.horizontalOverflow = HorizontalWrapMode.Overflow;
+            cardTypeLabelText.verticalOverflow = VerticalWrapMode.Overflow;
+            cardTypeLabelText.raycastTarget = false;
+
+            Outline outline = lblObj.GetComponent<Outline>();
+            outline.effectColor = new Color(0.02f, 0.04f, 0.10f, 0.95f);
+            outline.effectDistance = new Vector2(1.5f, -1.5f);
+        }
+
+        if (critStarBadgeText == null)
+        {
+            Transform critTr = transform.Find("CritStarBadge");
+            if (critTr != null)
+                critStarBadgeText = critTr.GetComponent<Text>();
+        }
+
+        if (critStarBadgeText == null)
+        {
+            GameObject critObj = new GameObject("CritStarBadge", typeof(RectTransform), typeof(CanvasRenderer), typeof(Text), typeof(Outline));
+            critObj.layer = gameObject.layer;
+            critObj.transform.SetParent(transform, false);
+
+            RectTransform rt = critObj.GetComponent<RectTransform>();
+            rt.anchorMin = new Vector2(0.5f, 1f);
+            rt.anchorMax = new Vector2(0.5f, 1f);
+            rt.pivot = new Vector2(0.5f, 1f);
+            rt.anchoredPosition = new Vector2(0f, -8f);
+            rt.sizeDelta = new Vector2(110f, 24f);
+            rt.localScale = Vector3.one;
+
+            critStarBadgeText = critObj.GetComponent<Text>();
+            critStarBadgeText.font = GetOrCreateCardFont();
+            critStarBadgeText.fontSize = 14;
+            critStarBadgeText.fontStyle = FontStyle.Bold;
+            critStarBadgeText.alignment = TextAnchor.MiddleCenter;
+            critStarBadgeText.color = new Color(1f, 0.88f, 0.25f, 1f);
+            critStarBadgeText.horizontalOverflow = HorizontalWrapMode.Overflow;
+            critStarBadgeText.verticalOverflow = VerticalWrapMode.Overflow;
+            critStarBadgeText.raycastTarget = false;
+
+            Outline outline = critObj.GetComponent<Outline>();
+            outline.effectColor = new Color(0.15f, 0.06f, 0.01f, 0.98f);
+            outline.effectDistance = new Vector2(1.4f, -1.4f);
+
+            critObj.SetActive(false);
+        }
+    }
+
+    private static Font GetOrCreateCardFont()
+    {
+        if (cachedCardFont != null) return cachedCardFont;
+
+        string[] fontCandidates = { "Malgun Gothic", "맑은 고딕", "Arial" };
+        cachedCardFont = Font.CreateDynamicFontFromOSFont(fontCandidates, 20);
+        if (cachedCardFont == null)
+            cachedCardFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+
+        return cachedCardFont;
     }
 
     private void Start()
     {
         InitComponents();
 
-        // HandManager 등에서 아직 위치를 지정받지 않았다면 현재 Inspector 좌표를 기억해 둠
         if (!isInitialized)
         {
             originPosition = rectTransform.anchoredPosition;
@@ -102,47 +293,61 @@ public class Card : MonoBehaviour,
         }
     }
 
-    // 1. 마우스를 카드 위에 올렸을 때 (Hover 시작)
+    private bool CanInteract()
+    {
+        if (PauseMenuManager.Ins != null && PauseMenuManager.Ins.IsPaused)
+            return false;
+
+        return BattleManager.Ins == null || BattleManager.Ins.IsPlayerInputAllowed;
+    }
+
+    private void ApplyAnchoredPositionZeroZ(Vector2 anchoredPos)
+    {
+        rectTransform.anchoredPosition = anchoredPos;
+        Vector3 lp = rectTransform.localPosition;
+        if (lp.z != 0f)
+            rectTransform.localPosition = new Vector3(lp.x, lp.y, 0f);
+    }
+
     public void OnPointerEnter(PointerEventData eventData)
     {
-        // 드래그 중일 때는 호버 효과가 중복 실행되지 않게 막음
+        if (!CanInteract()) return;
         if (isDragging) return;
 
         isHovered = true;
         originSiblingIndex = transform.GetSiblingIndex();
-        transform.SetAsLastSibling(); // 호버된 카드가 옆 카드에 가려지지 않게 맨 위로 표시
+        transform.SetAsLastSibling();
 
         if (isInAttackBox)
         {
-            // Attack Box 안에 있을 때는 박스 밖으로 튀어나가지 않도록 살짝만 확대
             transform.localScale = Vector3.one * 1.08f;
-            rectTransform.anchoredPosition = originPosition + new Vector2(0f, 10f);
+            ApplyAnchoredPositionZeroZ(originPosition + new Vector2(0f, 10f));
         }
         else
         {
             transform.localScale = Vector3.one * hoverScale;
-            rectTransform.localRotation = Quaternion.identity; // 호버 시 카드를 똑바로 세움
-            rectTransform.anchoredPosition = originPosition + new Vector2(0f, hoverYOffset);
+            rectTransform.localRotation = Quaternion.identity;
+            ApplyAnchoredPositionZeroZ(originPosition + new Vector2(0f, hoverYOffset));
         }
     }
 
-    // 2. 마우스가 카드 밖으로 나갔을 때 (Hover 끝)
     public void OnPointerExit(PointerEventData eventData)
     {
         if (isDragging) return;
+        if (!isHovered) return;
 
         isHovered = false;
         transform.localScale = Vector3.one;
 
-        // 원래 위치, 회전, 겹침 순서로 정확히 복구
-        rectTransform.anchoredPosition = originPosition;
+        ApplyAnchoredPositionZeroZ(originPosition);
         rectTransform.localRotation = originRotation;
         transform.SetSiblingIndex(originSiblingIndex);
     }
 
-    // 3. 카드를 클릭해서 끌기 시작할 때
     public void OnBeginDrag(PointerEventData eventData)
     {
+        if (!CanInteract()) return;
+
         if (!isHovered)
             originSiblingIndex = transform.GetSiblingIndex();
 
@@ -151,36 +356,54 @@ public class Card : MonoBehaviour,
 
         transform.localScale = Vector3.one * (isInAttackBox ? 1.08f : hoverScale);
         rectTransform.localRotation = Quaternion.identity;
-        canvasGroup.blocksRaycasts = false; // 내 밑에 있는 Attack Box가 마우스를 감지할 수 있게 통과시킴
-        transform.SetAsLastSibling();       // 다른 카드들보다 맨 위에 그려지게 함
+        canvasGroup.blocksRaycasts = false;
+        transform.SetAsLastSibling();
     }
 
-    // 4. 마우스를 끌고 이동하는 중
     public void OnDrag(PointerEventData eventData)
     {
-        // 마우스 화면 좌표를 그대로 따라감
-        transform.position = eventData.position;
+        if (!isDragging) return;
 
-        // OnDrag 상태일 때 마우스 포인터가 Attack Box 위에 올라가 있다면
-        // Attack Box 안에 들어갈 수 있는 크기로 실시간 축소하여 시각적으로 보여줌
+        RectTransform parentRect = rectTransform.parent as RectTransform;
+        if (parentRect != null && RectTransformUtility.ScreenPointToLocalPointInRectangle(
+            parentRect,
+            eventData.position,
+            eventData.pressEventCamera,
+            out Vector2 localPoint))
+        {
+            rectTransform.localPosition = new Vector3(localPoint.x, localPoint.y, 0f);
+        }
+        else
+        {
+            transform.position = eventData.position;
+        }
+
         if (AttackBoxManager.Ins != null && AttackBoxManager.Ins.IsPointerOverBox(eventData))
         {
             transform.localScale = Vector3.one;
         }
     }
 
-    // 5. 마우스 버튼을 놓았을 때 (드롭)
     public void OnEndDrag(PointerEventData eventData)
     {
+        if (!isDragging) return;
+
         isDragging = false;
         canvasGroup.blocksRaycasts = true;
         transform.localScale = Vector3.one;
+
+        if (!CanInteract())
+        {
+            ApplyAnchoredPositionZeroZ(originPosition);
+            rectTransform.localRotation = originRotation;
+            transform.SetSiblingIndex(originSiblingIndex);
+            return;
+        }
 
         bool isOverAttackBox = AttackBoxManager.Ins != null && AttackBoxManager.Ins.IsPointerOverBox(eventData);
 
         if (isOverAttackBox)
         {
-            // 마우스 포인터가 Attack Box 위에 올라가 있는 상태로 놓았다면 Attack Box 왼쪽부터 차례대로 쌓음
             if (AttackBoxManager.Ins.TryAddCard(this))
             {
                 return;
@@ -188,29 +411,26 @@ public class Card : MonoBehaviour,
         }
         else if (isInAttackBox)
         {
-            // Attack Box 안에 있던 카드를 밖(허공)으로 빼내어 놓았을 경우 -> 손패의 원래 자리로 복귀
             AttackBoxManager.Ins.ReturnCardToHand(this);
             return;
         }
 
-        // 그 외 허공에 놓았거나 박스가 가득 찬 경우 원래 자리로 돌아감
-        rectTransform.anchoredPosition = originPosition;
+        ApplyAnchoredPositionZeroZ(originPosition);
         rectTransform.localRotation = originRotation;
         transform.SetSiblingIndex(originSiblingIndex);
     }
 
-    // 나중에 슬롯 스크립트에서 이 카드를 새 슬롯 위치에 고정시킬 때 부를 함수
     public void SetNewOriginPosition(Vector2 newAnchoredPos)
     {
         SetCardTransform(newAnchoredPos, Quaternion.identity, transform.GetSiblingIndex());
     }
 
-    // 손패(HandManager)에서 부채꼴 정렬 위치, 회전각, 정렬 순서를 갱신할 때 부르는 함수
     public void SetCardTransform(Vector2 newAnchoredPos, Quaternion newRotation, int siblingIndex)
     {
         InitComponents();
         isInitialized = true;
         isInAttackBox = false;
+        SetAssignedStars(0);
 
         originPosition = newAnchoredPos;
         originRotation = newRotation;
@@ -221,23 +441,23 @@ public class Card : MonoBehaviour,
         rectTransform.pivot = new Vector2(0.5f, 0.5f);
         rectTransform.sizeDelta = handCardSize;
 
-        // 손패로 돌아왔을 때는 원래 밝기(255, 255, 255)로 복구하고 금색 숫자 이미지를 숨김
         if (cardImage != null)
             cardImage.color = normalCardColor;
 
         if (orderNumberImage != null)
             orderNumberImage.gameObject.SetActive(false);
 
+        RefreshCardTypeLabel();
+
         if (!isDragging && !isHovered)
         {
-            rectTransform.anchoredPosition = originPosition;
+            ApplyAnchoredPositionZeroZ(originPosition);
             rectTransform.localRotation = originRotation;
             transform.localScale = Vector3.one;
             transform.SetSiblingIndex(originSiblingIndex);
         }
     }
 
-    // 손패에서의 원래 카드 크기를 설정하는 함수
     public void SetHandCardSize(Vector2 size)
     {
         InitComponents();
@@ -246,7 +466,6 @@ public class Card : MonoBehaviour,
             rectTransform.sizeDelta = handCardSize;
     }
 
-    // Attack Box 안에 들어갈 때 박스 크기에 맞게 축소, 색상 어둡게(156, 152, 152), 금색 순서 숫자를 띄우는 함수
     public void SetAttackBoxTransform(RectTransform boxParent, Vector2 boxAnchoredPos, Vector2 boxCardSize, int siblingIndex, Sprite orderSprite = null)
     {
         InitComponents();
@@ -259,13 +478,11 @@ public class Card : MonoBehaviour,
         rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
         rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
         rectTransform.pivot = new Vector2(0.5f, 0.5f);
-        rectTransform.sizeDelta = boxCardSize; // Attack Box 안에 들어가는 사이즈로 변경
+        rectTransform.sizeDelta = boxCardSize;
 
-        // 카드 오브젝트 색상을 (156, 152, 152)로 어두워지게 변경
         if (cardImage != null)
             cardImage.color = attackBoxDarkColor;
 
-        // 카드 중앙 위에 금색 순서 숫자 이미지 표시
         if (orderNumberImage != null)
         {
             if (orderSprite != null)
@@ -273,6 +490,7 @@ public class Card : MonoBehaviour,
                 orderNumberImage.sprite = orderSprite;
                 orderNumberImage.rectTransform.sizeDelta = orderNumberSize;
                 orderNumberImage.rectTransform.anchoredPosition = Vector2.zero;
+                orderNumberImage.rectTransform.localPosition = Vector3.zero;
                 orderNumberImage.transform.SetAsLastSibling();
                 orderNumberImage.gameObject.SetActive(true);
             }
@@ -282,13 +500,16 @@ public class Card : MonoBehaviour,
             }
         }
 
+        RefreshCardTypeLabel();
+        SetAssignedStars(assignedStars);
+
         originPosition = boxAnchoredPos;
         originRotation = Quaternion.identity;
         originSiblingIndex = siblingIndex;
 
         if (!isDragging && !isHovered)
         {
-            rectTransform.anchoredPosition = originPosition;
+            ApplyAnchoredPositionZeroZ(originPosition);
             rectTransform.localRotation = originRotation;
             transform.localScale = Vector3.one;
             transform.SetSiblingIndex(originSiblingIndex);

@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: d2ee31f445fdf8e449207a75a62b7200
+guid: 29bad62651373114cba75cf9c6e56701
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -6421623812723282128
-    second: player_neon_projectile_teal_0
+      213: -5881221266891032308
+    second: player_neon_pentagon_teal_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -113,13 +113,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: player_neon_projectile_teal_0
+      name: player_neon_pentagon_teal_0
       rect:
         serializedVersion: 2
-        x: 69
-        y: 150
-        width: 873
-        height: 211
+        x: 59
+        y: 80
+        width: 907
+        height: 880
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 03f60716a2fc1e6a0800000000000000
-      internalID: -6421623812723282128
+      spriteID: c09bc75fa64b16ea0800000000000000
+      internalID: -5881221266891032308
       vertices: []
       indices: 
       edges: []
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      player_neon_projectile_teal_0: -6421623812723282128
+      player_neon_pentagon_teal_0: -5881221266891032308
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

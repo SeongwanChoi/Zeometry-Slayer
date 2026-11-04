@@ -35,6 +35,17 @@ public class AttackBoxManager : Singleton<AttackBoxManager>
 
     public IReadOnlyList<Card> QueuedCards => queuedCards;
 
+    protected override void Awake()
+    {
+        base.Awake();
+
+        if (boxRectTransform == null)
+            boxRectTransform = GetComponent<RectTransform>();
+
+        if (boxFrameImage == null)
+            boxFrameImage = GetComponent<Image>();
+    }
+
     private void Start()
     {
         if (boxRectTransform == null)
@@ -45,6 +56,9 @@ public class AttackBoxManager : Singleton<AttackBoxManager>
 
         EnsureRuntimeOrderNumberSprites();
         UpdateBoxLayout();
+
+        // 씬에 BattleManager가 아직 배치되지 않은 상태더라도 게임 시작 시 즉시 턴 루프가 구동되도록 보장
+        _ = BattleManager.Ins;
     }
 
     /// <summary>
@@ -98,13 +112,18 @@ public class AttackBoxManager : Singleton<AttackBoxManager>
         if (IsReadyToExecute)
         {
             Debug.Log($"[AttackBox] 6장의 카드가 모두 장전되었습니다! ({queuedCards.Count}/{requiredCardCount})");
+            // 적(Enemy)이 이미 선택되어 있고 AttackBox에 6장이 꽉 찼다면 자동으로 내 턴 종료 및 Attack 페이즈 전환 체크
+            if (BattleManager.Ins != null)
+            {
+                BattleManager.Ins.CheckAutoEndPlayerTurn();
+            }
         }
 
         return true;
     }
 
     /// <summary>
-    /// Attack Box 안에 있던 카드를 빼내어 손패의 원래 자리로 돌려보냅니다.
+    /// Attack Box 안에 있던 카드를 빼내어 그 카드를 가진 플레이어의 손패 원래 자리로 돌려보냅니다.
     /// </summary>
     public void ReturnCardToHand(Card card)
     {
@@ -119,6 +138,105 @@ public class AttackBoxManager : Singleton<AttackBoxManager>
         if (HandManager.Ins != null)
         {
             HandManager.Ins.ReturnCardToHand(card);
+        }
+    }
+
+    /// <summary>
+    /// Attack 페이즈로 넘어갔을 때 보유 중이던 모든 스타를 AttackBox 안의 카드들에 랜덤으로 부여합니다.
+    /// (부여된 스타 1개당 해당 카드의 크리티컬 확률이 +10% 증가합니다.)
+    /// </summary>
+    public void DistributeStarsRandomly(int totalStars)
+    {
+        if (queuedCards.Count == 0) return;
+
+        int[] starCounts = new int[queuedCards.Count];
+
+        for (int s = 0; s < totalStars; s++)
+        {
+            // 아직 10개(100%) 미만인 카드 후보들을 우선 추출하여 스타가 낭비되지 않게 랜덤 분배
+            List<int> availableIndices = new List<int>();
+            for (int i = 0; i < queuedCards.Count; i++)
+            {
+                if (queuedCards[i] != null && starCounts[i] < 10)
+                    availableIndices.Add(i);
+            }
+
+            if (availableIndices.Count > 0)
+            {
+                int pick = availableIndices[Random.Range(0, availableIndices.Count)];
+                starCounts[pick]++;
+            }
+            else
+            {
+                int pick = Random.Range(0, queuedCards.Count);
+                starCounts[pick]++;
+            }
+        }
+
+        for (int i = 0; i < queuedCards.Count; i++)
+        {
+            if (queuedCards[i] != null)
+            {
+                queuedCards[i].SetAssignedStars(starCounts[i]);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Attack 페이즈에서 왼쪽에서부터 카드를 1장씩 소모하며 즉시 AttackBox에서 삭제합니다.
+    /// 소모된 카드의 종류(CardColor), 소유 플레이어(OwnerPlayerUnit), 부여된 스타 개수(AssignedStars)를 반환합니다.
+    /// </summary>
+    public bool ConsumeLeftmostCard(out ECardColor cardColor, out SelectableUnit ownerPlayer, out int assignedStars)
+    {
+        cardColor = ECardColor.ARTS;
+        ownerPlayer = null;
+        assignedStars = 0;
+
+        if (queuedCards.Count == 0)
+            return false;
+
+        Card leftmostCard = queuedCards[0];
+        queuedCards.RemoveAt(0);
+
+        if (leftmostCard != null)
+        {
+            cardColor = leftmostCard.CardColor;
+            ownerPlayer = leftmostCard.OwnerPlayerUnit;
+            assignedStars = leftmostCard.AssignedStars;
+            // 사용한 카드는 즉시 AttackBox에서 삭제된다
+            Destroy(leftmostCard.gameObject);
+        }
+
+        if (boxFrameImage != null && queuedCards.Count == 0)
+        {
+            boxFrameImage.color = normalFrameColor;
+        }
+
+        return true;
+    }
+
+    public bool ConsumeLeftmostCard(out ECardColor cardColor, out SelectableUnit ownerPlayer)
+    {
+        return ConsumeLeftmostCard(out cardColor, out ownerPlayer, out _);
+    }
+
+    /// <summary>
+    /// 전투 종료(승리 등) 시 AttackBox에 남아있는 카드를 모두 정리합니다.
+    /// </summary>
+    public void ClearAllQueuedCards()
+    {
+        for (int i = queuedCards.Count - 1; i >= 0; i--)
+        {
+            if (queuedCards[i] != null)
+            {
+                Destroy(queuedCards[i].gameObject);
+            }
+        }
+        queuedCards.Clear();
+
+        if (boxFrameImage != null)
+        {
+            boxFrameImage.color = normalFrameColor;
         }
     }
 
@@ -171,9 +289,6 @@ public class AttackBoxManager : Singleton<AttackBoxManager>
         return null;
     }
 
-    /// <summary>
-    /// 만약 인스펙터에 금색 숫자 스프라이트가 비어있더라도 런타임에 즉시 생성하여 표시되도록 보장합니다.
-    /// </summary>
     private void EnsureRuntimeOrderNumberSprites()
     {
         if (orderNumberSprites == null || orderNumberSprites.Length < requiredCardCount)

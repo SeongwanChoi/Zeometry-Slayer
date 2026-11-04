@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 3532702875644410546}
   - component: {fileID: 7731481432992504580}
   - component: {fileID: 8502067566472577472}
-  m_Layer: 0
+  m_Layer: 5
   m_Name: Card_Neon_Blue
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -102,6 +102,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 725e61bbb220774478dd8d6a69445406, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Card
+  cardColor: 1
+  ownerPlayerIndex: 0
+  ownerPlayerUnit: {fileID: 0}
+  redCardSprite: {fileID: -828483678819365525, guid: d9cd029c0a892884595f903ce6441bb9, type: 3}
+  blueCardSprite: {fileID: 8322382612814548259, guid: d945f7a5b1e525447b9bc17f7cd88b09, type: 3}
+  greenCardSprite: {fileID: -8106867172880479415, guid: a564617e4b727b647af2ad21d986bce8, type: 3}
   hoverScale: 1.15
   hoverYOffset: 40
   normalCardColor: {r: 1, g: 1, b: 1, a: 1}
