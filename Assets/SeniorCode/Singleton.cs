@@ -1,10 +1,13 @@
 using UnityEngine;
 
-//enum 관련은 못적음 -> 핵심은 리스트에 제네릭, 클래스를 형식으로 써서 데이터를 담는 변수처럼 쓸 수도 있으며 Find() FindAll() 함수를 사용하는 것이 핵심
-
+/// <summary>
+/// 제네릭 MonoBehaviour 싱글톤 베이스 클래스:
+/// - KeepAliveAcrossScenes가 false(기본값)이면 씬 종속 싱글톤으로 동작하여 씬 전환 시 새 인스턴스로 깔끔하게 교체됩니다.
+/// - KeepAliveAcrossScenes가 true(예: SoundManager)이면 DontDestroyOnLoad를 통해 씬 전환 간에도 인스턴스를 유지합니다.
+/// </summary>
 public class Singleton<T> : MonoBehaviour where T : MonoBehaviour
 {
-    static T instance;
+    private static T instance;
 
     public static T Ins
     {
@@ -35,21 +38,40 @@ public class Singleton<T> : MonoBehaviour where T : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// 씬 전환 시에도 파괴되지 않고 유지할지 여부 (기본값 false: 씬별 고유 매니저는 씬 전환 시 새로 교체됨)
+    /// </summary>
+    protected virtual bool KeepAliveAcrossScenes => false;
+
     protected virtual void Awake()
     {
         if (instance != null && instance != this)
         {
-            Destroy(gameObject);
-            return;
+            if (KeepAliveAcrossScenes)
+            {
+                Destroy(gameObject);
+                return;
+            }
+
+            // 씬 종속 싱글톤인 경우 이전 씬에서 남아있던 인스턴스를 정리하고 현재 씬의 새 인스턴스로 교체
+            Destroy(instance.gameObject);
         }
 
         instance = this as T;
-        // 루트 오브젝트일 때만 DontDestroyOnLoad 호출 (Canvas 하위 UI 오브젝트가 깨지지 않도록 보호)
-        if (transform.parent == null)
+        // KeepAliveAcrossScenes가 활성화된 루트 오브젝트일 때만 DontDestroyOnLoad 호출
+        if (KeepAliveAcrossScenes && transform.parent == null)
         {
             DontDestroyOnLoad(gameObject);
         }
         Init();
+    }
+
+    protected virtual void OnDestroy()
+    {
+        if (instance == this)
+        {
+            instance = null;
+        }
     }
 
     public virtual void Init() { } // 호출하면 DontDestroy목록으로 생길테니까

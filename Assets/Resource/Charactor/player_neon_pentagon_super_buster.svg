@@ -1,0 +1,150 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+<defs>
+  <!-- Authentic Neon Glass Tube Glow Filters -->
+  <filter id="neon-glow" x="-50%" y="-50%" width="200%" height="200%">
+    <feGaussianBlur stdDeviation="22" result="blur1"/>
+    <feGaussianBlur stdDeviation="9" result="blur2"/>
+    <feMerge>
+      <feMergeNode in="blur1"/>
+      <feMergeNode in="blur2"/>
+      <feMergeNode in="SourceGraphic"/>
+    </feMerge>
+  </filter>
+  <filter id="super-bloom" x="-60%" y="-60%" width="220%" height="220%">
+    <feGaussianBlur stdDeviation="38" result="heavy"/>
+    <feGaussianBlur stdDeviation="15" result="mid"/>
+    <feMerge>
+      <feMergeNode in="heavy"/>
+      <feMergeNode in="mid"/>
+      <feMergeNode in="SourceGraphic"/>
+    </feMerge>
+  </filter>
+
+  <!-- High-Energy Plasma Reactor Gradients -->
+  <radialGradient id="plasma-core" cx="50%" cy="50%" r="50%">
+    <stop offset="0%" stop-color="#ffffff"/>
+    <stop offset="25%" stop-color="#ffea78"/>
+    <stop offset="55%" stop-color="#ff2e56"/>
+    <stop offset="85%" stop-color="#ff003c" stop-opacity="0.85"/>
+    <stop offset="100%" stop-color="#800018" stop-opacity="0"/>
+  </radialGradient>
+
+  <linearGradient id="neon-fire-grad" x1="0" y1="1" x2="0" y2="0">
+    <stop offset="0%" stop-color="#ff0044"/>
+    <stop offset="45%" stop-color="#ff3e00"/>
+    <stop offset="80%" stop-color="#ff9900"/>
+    <stop offset="100%" stop-color="#ffffff"/>
+  </linearGradient>
+
+  <linearGradient id="blade-glow-grad" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0%" stop-color="#ffffff"/>
+    <stop offset="30%" stop-color="#ff2a55"/>
+    <stop offset="100%" stop-color="#990022"/>
+  </linearGradient>
+</defs>
+
+<!-- LAYER 1: 5-Directional Outer Blast Spikes / Heavy Armor Wings -->
+<!-- Calculated 5-pointed spike vertices extending to R=480: (512, 32), (968, 363), (794, 898), (230, 898), (56, 363) -->
+<g fill="none" stroke="#ff0040" stroke-linejoin="round" filter="url(#super-bloom)" opacity="0.45">
+  <!-- Outer Energy Surge Blades -->
+  <path d="M512 32 L565 240 L512 210 L459 240 Z" fill="#ff0044" fill-opacity="0.25" stroke="#ff2255" stroke-width="12"/>
+  <path d="M968 363 L778 385 L762 435 L738 480 Z" fill="#ff0044" fill-opacity="0.25" stroke="#ff2255" stroke-width="12"/>
+  <path d="M794 898 L690 755 L638 780 L620 830 Z" fill="#ff0044" fill-opacity="0.25" stroke="#ff2255" stroke-width="12"/>
+  <path d="M230 898 L404 830 L386 780 L334 755 Z" fill="#ff0044" fill-opacity="0.25" stroke="#ff2255" stroke-width="12"/>
+  <path d="M56 363 L286 480 L262 435 L246 385 Z" fill="#ff0044" fill-opacity="0.25" stroke="#ff2255" stroke-width="12"/>
+</g>
+
+<!-- LAYER 2: Outermost Heavy Neon Frame (Spiked Pentagon at R=390) -->
+<!-- Vertices: (512, 122), (883, 391), (741, 827), (283, 827), (141, 391) -->
+<polygon points="512,122 883,391 741,827 283,827 141,391" 
+         fill="#140206" fill-opacity="0.75" 
+         stroke="#ff0044" stroke-width="26" stroke-linejoin="round" 
+         filter="url(#neon-glow)" opacity="0.5"/>
+
+<polygon points="512,122 883,391 741,827 283,827 141,391" 
+         fill="none" 
+         stroke="url(#neon-fire-grad)" stroke-width="14" stroke-linejoin="round"/>
+
+<polygon points="512,122 883,391 741,827 283,827 141,391" 
+         fill="none" 
+         stroke="#ffffff" stroke-width="5" stroke-linejoin="round"/>
+
+<!-- LAYER 3: Razor Spikes on Pentagon Corners -->
+<g fill="#ff1744" stroke="#ffffff" stroke-width="3" stroke-linejoin="round" filter="url(#neon-glow)">
+  <polygon points="512,45 536,135 488,135"/>
+  <polygon points="950,369 865,365 892,410"/>
+  <polygon points="782,885 754,805 710,838"/>
+  <polygon points="242,885 314,838 270,805"/>
+  <polygon points="74,369 132,410 159,365"/>
+</g>
+
+<!-- LAYER 4: Middle Neon Tubing Pentagon (R=310) -->
+<!-- Vertices: (512, 202), (807, 416), (694, 763), (330, 763), (217, 416) -->
+<polygon points="512,202 807,416 694,763 330,763 217,416" 
+         fill="none" 
+         stroke="#ff3300" stroke-width="10" stroke-linejoin="round" 
+         filter="url(#neon-glow)"/>
+<polygon points="512,202 807,416 694,763 330,763 217,416" 
+         fill="none" 
+         stroke="#ffeedd" stroke-width="4" stroke-linejoin="round"/>
+
+<!-- LAYER 5: Geometric Circuitry & Power Beams -->
+<g fill="none" stroke="#ff2255" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" filter="url(#neon-glow)">
+  <!-- Radial bus lines -->
+  <line x1="512" y1="202" x2="512" y2="400"/>
+  <line x1="807" y1="416" x2="618" y2="478"/>
+  <line x1="694" y1="763" x2="578" y2="602"/>
+  <line x1="330" y1="763" x2="446" y2="602"/>
+  <line x1="217" y1="416" x2="406" y2="478"/>
+
+  <!-- Inner Pentagram Interconnects -->
+  <polygon points="512,202 694,763 217,416 807,416 330,763" 
+           stroke="#ffaa00" stroke-width="5" opacity="0.8"/>
+  <polygon points="512,202 694,763 217,416 807,416 330,763" 
+           stroke="#ffffff" stroke-width="2" opacity="0.9"/>
+</g>
+
+<!-- LAYER 6: 5 Power Node Concentrators -->
+<g fill="#ffffff" stroke="#ff1144" stroke-width="6" filter="url(#neon-glow)">
+  <circle cx="512" cy="202" r="14"/>
+  <circle cx="807" cy="416" r="14"/>
+  <circle cx="694" cy="763" r="14"/>
+  <circle cx="330" cy="763" r="14"/>
+  <circle cx="217" cy="416" r="14"/>
+</g>
+<g fill="#ffe066">
+  <circle cx="512" cy="202" r="6"/>
+  <circle cx="807" cy="416" r="6"/>
+  <circle cx="694" cy="763" r="6"/>
+  <circle cx="330" cy="763" r="6"/>
+  <circle cx="217" cy="416" r="6"/>
+</g>
+
+<!-- LAYER 7: Central Ultimate Plasma Reactor Core -->
+<!-- Giant Energy Corona -->
+<circle cx="512" cy="512" r="180" fill="url(#plasma-core)" opacity="0.65"/>
+
+<!-- Outer Reactor Ring with Tick Marks -->
+<circle cx="512" cy="512" r="115" fill="none" stroke="#ff3b00" stroke-width="8" stroke-dasharray="18 12" filter="url(#neon-glow)"/>
+<circle cx="512" cy="512" r="92" fill="#200008" stroke="#ff0044" stroke-width="6" filter="url(#neon-glow)"/>
+
+<!-- Blazing 5-Pointed Star Core inside Reactor -->
+<g fill="#ffea00" stroke="#ffffff" stroke-width="4" stroke-linejoin="round" filter="url(#neon-glow)">
+  <!-- Inner Star R=75, r=32 -->
+  <polygon points="512,437 531,486 583,489 543,522 557,572 512,543 467,572 481,522 441,489 493,486"/>
+</g>
+
+<!-- Innermost High-Temp White Core -->
+<circle cx="512" cy="512" r="22" fill="#ffffff" filter="url(#super-bloom)"/>
+<circle cx="512" cy="512" r="12" fill="#ffffff"/>
+
+<!-- Blast Lightning Rays radiating from center -->
+<g stroke="#ffffff" stroke-width="2.5" opacity="0.85" filter="url(#neon-glow)">
+  <line x1="512" y1="430" x2="512" y2="350"/>
+  <line x1="588" y1="486" x2="658" y2="465"/>
+  <line x1="560" y1="580" x2="620" y2="650"/>
+  <line x1="464" y1="580" x2="404" y2="650"/>
+  <line x1="436" y1="486" x2="366" y2="465"/>
+</g>
+
+</svg>

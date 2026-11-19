@@ -1,17 +1,21 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 
 public class BattleManager : Singleton<BattleManager>
 {
+    public static event System.Action OnPlayerTurnEndedEvent;
+    public static System.Func<SelectableUnit, IEnumerator> EnemyTurnTutorialHook;
+
     [Header("현재 턴 상태")]
     [SerializeField] private ETurn currunt_Turn = ETurn.PLAYER;
     [SerializeField] private int currentTurnNumber = 0;
 
     [Header("1. 턴 UI 및 배너 중앙 유지 시간 (Inspector 조정 가능)")]
     [SerializeField] private TurnUIController turnUIController;
-    [Tooltip("턴 시작 시 화면 가운데에 배너가 머무르는 일정 시간 (초) - Inspector에서 조정 가능")]
+    [Tooltip("턴 시작 시 화면 가운데에 배너가 머무르는 일정 시간 (초)")]
     [SerializeField] private float turnBannerCenterHoldTime = 1.0f;
 
     [Header("2. 플레이어 및 적 오브젝트 참조")]
@@ -25,9 +29,9 @@ public class BattleManager : Singleton<BattleManager>
     [SerializeField] private float selectedScaleMultiplier = 1.22f;
 
     [Header("4. 페이즈 진행 속도 설정")]
-    [Tooltip("Attack 페이즈에서 카드 1장 소모 후 다음 카드 공격까지의 간격 (초)")]
-    [SerializeField] private float attackStepInterval = 0.25f;
-    [Tooltip("Enemy 턴에서 적의 각 공격(총 6회) 사이의 간격 (초)")]
+    [Tooltip("카드 공격 연출 간격 (초)")]
+    [SerializeField] private float attackStepInterval = 0.18f;
+    [Tooltip("Enemy 턴에서 적의 각 공격 사이의 간격 (초)")]
     [SerializeField] private float enemyAttackInterval = 0.22f;
     [Tooltip("적 전체 행동 횟수 (3명 합쳐서 6번)")]
     [SerializeField] private int totalEnemyActions = 6;
@@ -38,22 +42,29 @@ public class BattleManager : Singleton<BattleManager>
     private SelectableUnit selectedEnemy;
     private bool isPhaseTransitioning = false;
     private bool isAttackPhaseRunning = false;
+    private bool isCardAttackAnimating = false;
     private bool isBattleEnded = false;
+    private bool isDoubleStarGainActiveThisTurn = false;
     private Camera mainCamera;
 
     /// <summary>
-    /// 플레이어 턴이고 공격/적 턴 진행 중이 아니며, ESC 일시정지 메뉴나 승패 결과창이 열려있지 않을 때 조작을 허용합니다.
+    /// 플레이어 턴이고 공격/적 턴 진행 중이 아니며, 모달/일시정지/결과창이 열려있지 않을 때 조작을 허용합니다.
     /// </summary>
     public bool IsPlayerInputAllowed =>
         !isBattleEnded &&
         (currunt_Turn == ETurn.PLAYER) &&
+        !isPhaseTransitioning &&
         !isAttackPhaseRunning &&
+        !isCardAttackAnimating &&
         (PauseMenuManager.Ins == null || !PauseMenuManager.Ins.IsPaused) &&
         (BattleResultUIManager.Ins == null || !BattleResultUIManager.Ins.IsResultShowing);
 
     public SelectableUnit SelectedPlayer => selectedPlayer;
     public SelectableUnit SelectedEnemy => selectedEnemy;
     public ETurn CurrentTurn => currunt_Turn;
+    public bool IsDoubleStarGainActiveThisTurn => isDoubleStarGainActiveThisTurn;
+    public IReadOnlyList<SelectableUnit> PlayerUnits => playerUnits;
+    public IReadOnlyList<SelectableUnit> EnemyUnits => enemyUnits;
 
     public override void Init()
     {
@@ -69,6 +80,8 @@ public class BattleManager : Singleton<BattleManager>
         _ = PauseMenuManager.Ins;
         _ = BattleResultUIManager.Ins;
         _ = BattleResourceUIManager.Ins;
+        _ = SkillConfirmModalUI.Ins;
+        _ = SplineTargetingArrow.Ins;
 
         // 첫 번째 Player 턴 시작
         StartCoroutine(CoStartPlayerTurn());
@@ -90,19 +103,8 @@ public class BattleManager : Singleton<BattleManager>
 
     private void PTurn()
     {
-        if (!IsPlayerInputAllowed) return;
-
-        // 마우스 좌클릭으로 생존한 Player 오브젝트 또는 Enemy 오브젝트의 Collider2D 선택 감지
-        if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
-        {
-            TrySelectUnitUnderMouse(Mouse.current.position.ReadValue());
-        }
-
-        // 플레이어 턴 중에 AttackBox에 카드 6장이 모두 들어오면 즉시 Attack 페이즈로 전환
-        if (!isAttackPhaseRunning && AttackBoxManager.Ins != null && AttackBoxManager.Ins.IsReadyToExecute)
-        {
-            CheckAutoEndPlayerTurn();
-        }
+        // 플레이어 및 Enemy 오브젝트 클릭 선택 기능은 삭제되었으며,
+        // 카드 드래그 타겟팅 및 스킬 아이콘 버튼으로 전투를 조작합니다.
     }
 
     private void EnTurn()
@@ -110,118 +112,293 @@ public class BattleManager : Singleton<BattleManager>
         // 적 턴은 코루틴(CoExecuteEnemyTurn)으로 순차 진행됩니다.
     }
 
-    private void TrySelectUnitUnderMouse(Vector2 screenPos)
-    {
-        if (mainCamera == null)
-            mainCamera = Camera.main;
-        if (mainCamera == null) return;
-
-        float distToPlane = Mathf.Abs(mainCamera.transform.position.z);
-        Vector3 worldPoint3D = mainCamera.ScreenToWorldPoint(new Vector3(screenPos.x, screenPos.y, distToPlane));
-        Vector2 worldPoint2D = new Vector2(worldPoint3D.x, worldPoint3D.y);
-
-        Collider2D[] hits = Physics2D.OverlapPointAll(worldPoint2D);
-        if (hits == null || hits.Length == 0) return;
-
-        for (int i = 0; i < hits.Length; i++)
-        {
-            if (hits[i] == null) continue;
-
-            SelectableUnit unit = hits[i].GetComponent<SelectableUnit>();
-            if (unit == null)
-                unit = hits[i].GetComponentInParent<SelectableUnit>();
-
-            if (unit != null && !unit.IsDead)
-            {
-                OnUnitClicked(unit);
-                return;
-            }
-        }
-    }
-
     public void OnUnitClicked(SelectableUnit clickedUnit)
     {
-        if (!IsPlayerInputAllowed || clickedUnit == null || clickedUnit.IsDead) return;
-
-        if (clickedUnit.IsPlayerUnit)
-        {
-            SelectPlayerUnit(clickedUnit);
-        }
-        else
-        {
-            SelectEnemyUnit(clickedUnit);
-        }
+        // 플레이어, Enemy Object 선택 기능 삭제됨
     }
 
     public void SelectPlayerUnit(SelectableUnit targetPlayer)
     {
-        if (targetPlayer == null || targetPlayer.IsDead) return;
-
-        selectedPlayer = targetPlayer;
-
-        for (int i = 0; i < playerUnits.Count; i++)
-        {
-            if (playerUnits[i] != null)
-            {
-                bool isThisSelected = (!playerUnits[i].IsDead && playerUnits[i] == selectedPlayer);
-                playerUnits[i].SetSelected(isThisSelected, selectedScaleMultiplier);
-            }
-        }
-
-        if (HandManager.Ins != null)
-        {
-            HandManager.Ins.ShowPlayerHand(selectedPlayer.UnitIndex);
-        }
+        // 플레이어 선택 및 크기 확대 기능 삭제됨
     }
 
     public void SelectEnemyUnit(SelectableUnit targetEnemy)
     {
-        if (targetEnemy == null || targetEnemy.IsDead) return;
+        // Enemy 선택 및 크기 확대 기능 삭제됨
+    }
 
-        selectedEnemy = targetEnemy;
+    // =========================================================================
+    // 플레이어 고유 스킬 지원 메서드 (Player_2 스타 +50 / 스타 2배 / 전체 방어력 +50%)
+    // =========================================================================
+    public void GainStarsImmediate(int amount)
+    {
+        if (amount <= 0) return;
+        int finalAmount = isDoubleStarGainActiveThisTurn ? amount * 2 : amount;
 
-        for (int i = 0; i < enemyUnits.Count; i++)
+        if (BattleResourceUIManager.Ins != null)
         {
-            if (enemyUnits[i] != null)
+            BattleResourceUIManager.Ins.AddStars(finalAmount);
+            BattleResourceUIManager.Ins.PunchStarIcon(1.28f, 0.2f);
+        }
+
+        if (SoundManager.Ins != null)
+            SoundManager.Ins.PlayStarEffect();
+    }
+
+    public void ActivateDoubleStarGainForTurn()
+    {
+        isDoubleStarGainActiveThisTurn = true;
+    }
+
+    public void ApplyPartyDefenseBuffStacks(int stacks)
+    {
+        EnsureSceneReferences();
+        for (int i = 0; i < playerUnits.Count; i++)
+        {
+            if (playerUnits[i] != null && !playerUnits[i].IsDead)
             {
-                bool isThisSelected = (!enemyUnits[i].IsDead && enemyUnits[i] == selectedEnemy);
-                enemyUnits[i].SetSelected(isThisSelected, selectedScaleMultiplier);
+                playerUnits[i].AddDefenseBuffStacks(stacks);
+            }
+        }
+    }
+
+    // =========================================================================
+    // 슬더스2 + FGO 방식 실시간 카드 타겟팅 사용 (PDF 1~5페이지 명세)
+    // =========================================================================
+    public bool TryPlayCardOnEnemy(Card card, SelectableUnit targetEnemy)
+    {
+        if (!IsPlayerInputAllowed || card == null || targetEnemy == null || targetEnemy.IsDead)
+            return false;
+
+        int neededCost = card.EffectiveCost;
+        if (BattleResourceUIManager.Ins != null)
+        {
+            if (!BattleResourceUIManager.Ins.TrySpendCost(neededCost))
+            {
+                if (SoundManager.Ins != null)
+                    SoundManager.Ins.PlaySkillBlocked();
+                return false;
             }
         }
 
-        CheckAutoEndPlayerTurn();
+        SelectableUnit attacker = card.OwnerPlayerUnit;
+        if (attacker == null || attacker.IsDead)
+        {
+            attacker = GetFirstAlivePlayer();
+        }
+
+        if (attacker == null)
+            return false;
+
+        StartCoroutine(CoExecuteSingleCardAttack(card, attacker, targetEnemy));
+        return true;
+    }
+
+    private IEnumerator CoExecuteSingleCardAttack(
+        Card usedCard,
+        SelectableUnit attackerPlayer,
+        SelectableUnit targetEnemy)
+    {
+        isCardAttackAnimating = true;
+
+        ECardColor cardColor = usedCard != null ? usedCard.CardColor : ECardColor.ARTS;
+        float rawCardDamage = usedCard != null ? usedCard.CalculateCardRawDamage() : 5f;
+        int assignedStars = usedCard != null ? usedCard.AssignedStars : 0;
+
+        // 1) 스타가 사용될 때: 해당 카드에 치명타 확률(최대 10개 = 100%)만큼 화면 하단 스타 표기 UI에서 카드로 스타가 날아가도록 연출
+        if (usedCard != null)
+        {
+            usedCard.IsAnimatingFlight = true;
+            RectTransform cardRt = usedCard.GetComponent<RectTransform>();
+            if (cardRt != null)
+            {
+                cardRt.anchoredPosition = new Vector2(0f, 62f);
+                cardRt.localRotation = Quaternion.identity;
+                usedCard.transform.localScale = Vector3.one * 1.15f;
+            }
+
+            int availableStars = BattleResourceUIManager.Ins != null ? BattleResourceUIManager.Ins.CurrentStars : 0;
+            int starsToFly = Mathf.Clamp(10 - assignedStars, 0, availableStars);
+
+            if (starsToFly > 0)
+            {
+                if (CombatEffectManager.Ins != null)
+                {
+                    yield return StartCoroutine(CombatEffectManager.Ins.CoFlyStarsFromCounterToSingleCard(usedCard, starsToFly));
+                    assignedStars = usedCard != null ? usedCard.AssignedStars : (assignedStars + starsToFly);
+                }
+                else if (BattleResourceUIManager.Ins != null)
+                {
+                    BattleResourceUIManager.Ins.DeductStars(starsToFly);
+                    assignedStars += starsToFly;
+                    usedCard.SetAssignedStars(assignedStars);
+                }
+            }
+
+            // 사용한 카드를 버린 카드 더미로 날려 보냄 (슬더스2 스타일 비행 연출)
+            if (HandManager.Ins != null)
+            {
+                HandManager.Ins.ConsumeAndDiscardCard(usedCard);
+            }
+            else if (usedCard != null)
+            {
+                Destroy(usedCard.gameObject);
+            }
+        }
+
+        if (targetEnemy == null || targetEnemy.IsDead)
+        {
+            targetEnemy = GetFirstAliveEnemy();
+        }
+
+        if (attackerPlayer != null && targetEnemy != null)
+        {
+            float damage = rawCardDamage;
+
+            // 크리티컬 판정 (스타 1개당 10%, 최대 100%)
+            float critChance = Mathf.Clamp(assignedStars * 10f, 0f, 100f);
+            bool isCritical = (critChance > 0f) && (Random.Range(0f, 100f) < critChance);
+            if (isCritical)
+            {
+                float critMultiplier = attackerPlayer.GetCriticalDamageMultiplier();
+                damage *= critMultiplier;
+            }
+
+            float finalEnemyDamage = targetEnemy.CalculateFinalTakenDamage(damage);
+
+            // 2) 플레이어 공격 오라 + 적 참격/흔들림/데미지 폰트 팝업 연출
+            ECardColor auraColor = cardColor == ECardColor.SUPER_BUSTER ? ECardColor.RED : cardColor;
+            bool spawnedPopupInEffect = false;
+            if (CombatEffectManager.Ins != null)
+            {
+                spawnedPopupInEffect = true;
+                yield return StartCoroutine(
+                    CombatEffectManager.Ins.PlayCardAttackSequence(attackerPlayer, auraColor, targetEnemy, finalEnemyDamage, isCritical)
+                );
+            }
+            else
+            {
+                yield return new WaitForSeconds(0.32f);
+            }
+
+            // 3) 적 체력 차감 및 사망 판정
+            Vector3 enemyHitWorldPos = targetEnemy.WorldBasePosition;
+            targetEnemy.TakeDamage(damage, isCritical, spawnPopup: !spawnedPopupInEffect);
+
+            // 4) 카드 속성별 효과 처리 (PDF 1페이지 & 스타 연출 변경 지시서)
+            switch (cardColor)
+            {
+                case ECardColor.ARTS:
+                    // Arts 카드: 공격력만큼 데미지를 주고 카드를 1장 드로우하며 다음턴 획득할 코스트를 1개 추가한다
+                    if (BattleResourceUIManager.Ins != null)
+                    {
+                        BattleResourceUIManager.Ins.AddNextTurnBonusCost(1);
+                    }
+                    if (HandManager.Ins != null)
+                    {
+                        HandManager.Ins.DrawCards(1);
+                    }
+                    break;
+
+                case ECardColor.QUICK:
+                    // Quick 카드: 공격력만큼 데미지를 주고 스타를 생성한다
+                    // - 적 피격 시 피격받은 적 오브젝트 위치(바닥 기준: 피격 적 y값)에서 스타 생성
+                    // - 스타 흡수는 화면 하단 스타 표기 UI(StarCounterUI)로 빨아들이도록 연출
+                    int baseStars = Random.Range(4, 9);
+                    int gainedStars = isDoubleStarGainActiveThisTurn ? baseStars * 2 : baseStars;
+
+                    if (CombatEffectManager.Ins != null)
+                    {
+                        yield return StartCoroutine(CombatEffectManager.Ins.CoSpawnStarsOnGround(enemyHitWorldPos, gainedStars));
+                        yield return new WaitForSeconds(0.18f);
+                        yield return StartCoroutine(CombatEffectManager.Ins.CoCollectGroundStarsToCounter());
+                    }
+                    else if (BattleResourceUIManager.Ins != null)
+                    {
+                        BattleResourceUIManager.Ins.AddStars(gainedStars);
+                    }
+                    break;
+            }
+
+            // 5) 모든 적 사망 승리 판정
+            if (AreAllEnemiesDead())
+            {
+                isBattleEnded = true;
+                isCardAttackAnimating = false;
+
+                if (CombatEffectManager.Ins != null && CombatEffectManager.Ins.HasGroundStars)
+                {
+                    yield return StartCoroutine(CombatEffectManager.Ins.CoCollectGroundStarsToCounter());
+                }
+
+                yield return new WaitForSeconds(0.65f);
+
+                if (BattleResultUIManager.Ins != null)
+                    BattleResultUIManager.Ins.ShowVictoryUI();
+
+                yield break;
+            }
+        }
+
+        if (attackStepInterval > 0f)
+            yield return new WaitForSeconds(attackStepInterval);
+
+        isCardAttackAnimating = false;
+    }
+
+    // =========================================================================
+    // 턴 종료 버튼 클릭 처리 -> 남은 손패 버리기 -> Enemy 턴 진행
+    // =========================================================================
+    public void TurnEnd()
+    {
+        if (!IsPlayerInputAllowed) return;
+        StartCoroutine(CoEndPlayerTurnAndStartEnemyTurn());
     }
 
     public void CheckAutoEndPlayerTurn()
     {
-        if (isBattleEnded || currunt_Turn != ETurn.PLAYER || isAttackPhaseRunning)
-            return;
-
-        if (AttackBoxManager.Ins == null || !AttackBoxManager.Ins.IsReadyToExecute)
-            return;
-
-        EnsureSceneReferences();
-
-        if (selectedEnemy == null || selectedEnemy.IsDead)
-        {
-            selectedEnemy = GetFirstAliveEnemy();
-            if (selectedEnemy != null)
-                selectedEnemy.SetSelected(true, selectedScaleMultiplier);
-        }
-
-        if (selectedEnemy != null)
-        {
-            StartCoroutine(CoExecuteAttackPhase());
-        }
+        // 레거시 호환 유지
     }
 
-    public void TurnEnd()
+    private IEnumerator CoEndPlayerTurnAndStartEnemyTurn()
     {
-        CheckAutoEndPlayerTurn();
+        if (isAttackPhaseRunning || isPhaseTransitioning || isBattleEnded)
+            yield break;
+
+        isAttackPhaseRunning = true;
+        isPhaseTransitioning = true;
+        currunt_Turn = ETurn.ATTACK;
+
+        OnPlayerTurnEndedEvent?.Invoke();
+
+        if (SplineTargetingArrow.Ins != null)
+            SplineTargetingArrow.Ins.HideArrow();
+
+        if (SkillConfirmModalUI.Ins != null)
+            SkillConfirmModalUI.Ins.HideModal();
+
+        // 남은 손패를 버린 카드 더미로 날려 보냄
+        if (HandManager.Ins != null)
+        {
+            yield return StartCoroutine(HandManager.Ins.CoDiscardRemainingHandAtTurnEnd());
+        }
+
+        if (CombatEffectManager.Ins != null && CombatEffectManager.Ins.HasGroundStars)
+        {
+            yield return StartCoroutine(CombatEffectManager.Ins.CoCollectGroundStarsToCounter());
+        }
+
+        isAttackPhaseRunning = false;
+
+        if (!isBattleEnded)
+        {
+            yield return new WaitForSeconds(0.2f);
+            yield return StartCoroutine(CoExecuteEnemyTurn());
+        }
     }
 
     // =========================================================================
-    // 1. Player 턴 시작 연출, 버프 증가(+1) 및 손패 배분
+    // 1. Player 턴 시작 연출, 코스트 충전(기본 3 + Arts 보너스), 5장 드로우
     // =========================================================================
     private IEnumerator CoStartPlayerTurn()
     {
@@ -229,15 +406,22 @@ public class BattleManager : Singleton<BattleManager>
 
         isPhaseTransitioning = true;
         isAttackPhaseRunning = false;
+        isCardAttackAnimating = false;
+        isDoubleStarGainActiveThisTurn = false;
         currunt_Turn = ETurn.PLAYER;
         currentTurnNumber++;
 
         EnsureSceneReferences();
 
-        // 2번째 턴부터 매 턴마다 버프를 가진 유닛들의 버프 값을 +1 증가시킵니다.
         if (currentTurnNumber > 1)
         {
             IncrementAllTurnBuffs();
+        }
+
+        // 코스트 충전 (기본 3 + 이전 턴 Arts 카드로 추가된 코스트)
+        if (BattleResourceUIManager.Ins != null)
+        {
+            BattleResourceUIManager.Ins.RefillCostForNewTurn();
         }
 
         selectedPlayer = null;
@@ -246,33 +430,13 @@ public class BattleManager : Singleton<BattleManager>
         for (int i = 0; i < playerUnits.Count; i++)
         {
             if (playerUnits[i] != null)
-                playerUnits[i].SetSelected(false, selectedScaleMultiplier);
+                playerUnits[i].SetSelected(false);
         }
 
         for (int i = 0; i < enemyUnits.Count; i++)
         {
             if (enemyUnits[i] != null)
-                enemyUnits[i].SetSelected(false, selectedScaleMultiplier);
-        }
-
-        // 생존한 모든 플레이어에게 새 랜덤 손패(RED, GREEN, BLUE 중 랜덤 6장) 배분
-        if (HandManager.Ins != null)
-        {
-            HandManager.Ins.DealRandomHandsForAllPlayers(playerUnits);
-        }
-
-        // 첫 번째 생존 플레이어와 첫 번째 생존 적을 기본 선택
-        SelectableUnit firstPlayer = GetFirstAlivePlayer();
-        if (firstPlayer != null)
-        {
-            SelectPlayerUnit(firstPlayer);
-        }
-
-        SelectableUnit firstEnemy = GetFirstAliveEnemy();
-        if (firstEnemy != null)
-        {
-            selectedEnemy = firstEnemy;
-            selectedEnemy.SetSelected(true, selectedScaleMultiplier);
+                enemyUnits[i].SetSelected(false);
         }
 
         if (turnUIController != null)
@@ -281,164 +445,17 @@ public class BattleManager : Singleton<BattleManager>
             yield return StartCoroutine(turnUIController.PlayTurnTransitionRoutine(ETurn.PLAYER, turnBannerCenterHoldTime));
         }
 
+        // 턴 시작 시 모든 플레이어의 카드를 합친 덱에서 5장을 랜덤으로 손패로 드로우
+        if (HandManager.Ins != null)
+        {
+            HandManager.Ins.DealRandomHandsForAllPlayers(playerUnits);
+        }
+
         isPhaseTransitioning = false;
     }
 
     // =========================================================================
-    // 2. Attack 페이즈: 왼쪽부터 카드 1장씩 소모 -> 해당 색의 공격 및 데미지 계산 수행
-    // =========================================================================
-    private IEnumerator CoExecuteAttackPhase()
-    {
-        if (isAttackPhaseRunning || isBattleEnded) yield break;
-
-        isAttackPhaseRunning = true;
-        isPhaseTransitioning = true;
-        currunt_Turn = ETurn.ATTACK;
-
-        EnsureSceneReferences();
-
-        if (HandManager.Ins != null)
-        {
-            HandManager.Ins.SetHandVisibility(false);
-        }
-
-        if (turnUIController != null)
-        {
-            turnUIController.UpdateTopLeftStatus(ETurn.ATTACK);
-        }
-
-        // Attack 페이즈로 넘어갔을 때, 이전 턴에 획득해 둔 모든 스타를 AttackBox 안의 카드들에 랜덤으로 부여합니다.
-        // (부여된 스타 1개당 해당 카드의 크리티컬 확률이 +10% 증가합니다.)
-        if (BattleResourceUIManager.Ins != null && AttackBoxManager.Ins != null)
-        {
-            int starsToDistribute = BattleResourceUIManager.Ins.ConsumeAllStarsForAttackPhase();
-            if (starsToDistribute > 0)
-            {
-                AttackBoxManager.Ins.DistributeStarsRandomly(starsToDistribute);
-                yield return new WaitForSeconds(0.45f);
-            }
-            else
-            {
-                yield return new WaitForSeconds(0.35f);
-            }
-        }
-        else
-        {
-            yield return new WaitForSeconds(0.35f);
-        }
-
-        while (AttackBoxManager.Ins != null &&
-               AttackBoxManager.Ins.ConsumeLeftmostCard(out ECardColor cardColor, out SelectableUnit attackerPlayer, out int assignedStars))
-        {
-            if (attackerPlayer == null || attackerPlayer.IsDead)
-            {
-                attackerPlayer = (selectedPlayer != null && !selectedPlayer.IsDead)
-                    ? selectedPlayer
-                    : GetFirstAlivePlayer();
-            }
-
-            if (attackerPlayer == null)
-                break;
-
-            SelectableUnit targetEnemy = (selectedEnemy != null && !selectedEnemy.IsDead)
-                ? selectedEnemy
-                : GetFirstAliveEnemy();
-
-            if (targetEnemy == null)
-                break;
-
-            if (selectedEnemy != targetEnemy)
-            {
-                selectedEnemy = targetEnemy;
-                selectedEnemy.SetSelected(true, selectedScaleMultiplier);
-            }
-
-            // 1) 플레이어 공격 오라 + 적 참격/흔들림 연출 실행
-            if (CombatEffectManager.Ins != null)
-            {
-                yield return StartCoroutine(
-                    CombatEffectManager.Ins.PlayCardAttackSequence(attackerPlayer, cardColor, targetEnemy)
-                );
-            }
-            else
-            {
-                yield return new WaitForSeconds(0.4f);
-            }
-
-            // 2) 기본 공격 데미지 계산 (공격력 * 버프)
-            float damage = attackerPlayer.CalculateAttackDamage();
-
-            // 3) 카드 종류(Buster / Arts / Quick)에 따른 배율 및 자원(코스트/스타) 획득 처리
-            switch (cardColor)
-            {
-                case ECardColor.BUSTER: // 빨간색 Buster 카드: 공격 시 데미지에 * 1.5 연산
-                    damage *= 1.5f;
-                    break;
-
-                case ECardColor.ARTS:   // 파란색 Arts 카드: 공격력만큼 데미지를 주며 코스트 1 획득
-                    if (BattleResourceUIManager.Ins != null)
-                    {
-                        BattleResourceUIManager.Ins.AddCost(1);
-                    }
-                    break;
-
-                case ECardColor.QUICK:  // 초록색 Quick 카드: 공격력만큼 데미지를 주며 스타 랜덤(1~10) 획득 (다음 턴에 사용됨)
-                    if (BattleResourceUIManager.Ins != null)
-                    {
-                        int gainedStars = Random.Range(1, 11); // 1 ~ 10 랜덤 획득
-                        BattleResourceUIManager.Ins.AddStars(gainedStars);
-                    }
-                    break;
-            }
-
-            // 4) 크리티컬 판정: 부여된 스타 1개당 크리티컬 확률 +10%, 크리티컬 발생 시 데미지 * 2 연산
-            float critChance = Mathf.Clamp(assignedStars * 10f, 0f, 100f);
-            bool isCritical = (critChance > 0f) && (Random.Range(0f, 100f) < critChance);
-            if (isCritical)
-            {
-                damage *= 2f;
-                Debug.Log($"[Attack] {cardColor.GetCardName()} 카드 크리티컬 히트! (확률 {critChance:0}% -> 데미지 x2 = {damage})");
-            }
-
-            // 5) 최종 데미지 적용 및 사망 판정
-            bool enemyDied = targetEnemy.TakeDamage(damage);
-
-            // 3) 모든 Enemy가 사망했는지 승리 판정 체크
-            if (AreAllEnemiesDead())
-            {
-                isBattleEnded = true;
-                if (AttackBoxManager.Ins != null)
-                    AttackBoxManager.Ins.ClearAllQueuedCards();
-
-                // 적 오브젝트가 서서히 옅어지며 사라지는 연출이 보이도록 잠시 대기 후 승리 UI 표시
-                yield return new WaitForSeconds(0.7f);
-
-                if (BattleResultUIManager.Ins != null)
-                    BattleResultUIManager.Ins.ShowVictoryUI();
-
-                yield break;
-            }
-            else if (enemyDied)
-            {
-                // 타겟 적이 사망했으나 다른 적이 남아있다면 다음 생존 적을 자동으로 타겟 지정
-                selectedEnemy = GetFirstAliveEnemy();
-                if (selectedEnemy != null)
-                    selectedEnemy.SetSelected(true, selectedScaleMultiplier);
-            }
-
-            if (attackStepInterval > 0f)
-                yield return new WaitForSeconds(attackStepInterval);
-        }
-
-        if (!isBattleEnded)
-        {
-            yield return new WaitForSeconds(0.3f);
-            yield return StartCoroutine(CoExecuteEnemyTurn());
-        }
-    }
-
-    // =========================================================================
-    // 3. Enemy 턴: 생존한 적들이 행동(최대 2번씩, 총 최대 6번), 데미지(공격력 * 버프) 계산 및 패배 판정
+    // 2. Enemy 턴: 생존한 적들이 행동, 데미지 계산 및 패배 판정
     // =========================================================================
     private IEnumerator CoExecuteEnemyTurn()
     {
@@ -466,6 +483,11 @@ public class BattleManager : Singleton<BattleManager>
 
         List<SelectableUnit> actionQueue = BuildEnemyActionQueue();
 
+        if (EnemyTurnTutorialHook != null && actionQueue.Count > 0)
+        {
+            yield return StartCoroutine(EnemyTurnTutorialHook(actionQueue[0]));
+        }
+
         for (int i = 0; i < actionQueue.Count; i++)
         {
             SelectableUnit attackerEnemy = actionQueue[i];
@@ -476,11 +498,15 @@ public class BattleManager : Singleton<BattleManager>
             if (randomTargetPlayer == null)
                 break;
 
-            // 1) 피격받는 플레이어 흔들림 모션 재생
+            float enemyDamage = attackerEnemy.CalculateAttackDamage();
+            float finalPlayerDamage = randomTargetPlayer.CalculateFinalTakenDamage(enemyDamage);
+
+            bool spawnedPopupInEffect = false;
             if (CombatEffectManager.Ins != null)
             {
+                spawnedPopupInEffect = true;
                 yield return StartCoroutine(
-                    CombatEffectManager.Ins.PlayPlayerHitSequenceOnUnit(randomTargetPlayer)
+                    CombatEffectManager.Ins.PlayPlayerHitSequenceOnUnit(randomTargetPlayer, finalPlayerDamage, false)
                 );
             }
             else
@@ -488,16 +514,11 @@ public class BattleManager : Singleton<BattleManager>
                 yield return new WaitForSeconds(0.35f);
             }
 
-            // 2) 적 데미지 계산 (10f~20f * 버프 수치) 및 플레이어 체력 차감
-            float enemyDamage = attackerEnemy.CalculateAttackDamage();
-            randomTargetPlayer.TakeDamage(enemyDamage);
+            randomTargetPlayer.TakeDamage(enemyDamage, isCritical: false, spawnPopup: !spawnedPopupInEffect);
 
-            // 3) 모든 Player가 사망했는지 패배 판정 체크
             if (AreAllPlayersDead())
             {
                 isBattleEnded = true;
-
-                // 마지막 플레이어가 서서히 옅어지며 사라지는 연출이 끝날 때까지 대기 후 패배 UI 표시
                 yield return new WaitForSeconds(0.7f);
 
                 if (BattleResultUIManager.Ins != null)
@@ -522,7 +543,10 @@ public class BattleManager : Singleton<BattleManager>
         for (int i = 0; i < playerUnits.Count; i++)
         {
             if (playerUnits[i] != null && !playerUnits[i].IsDead)
+            {
                 playerUnits[i].IncrementTurnBuff(1);
+                playerUnits[i].AdvanceSkillTurnState();
+            }
         }
 
         for (int i = 0; i < enemyUnits.Count; i++)
@@ -642,6 +666,7 @@ public class BattleManager : Singleton<BattleManager>
             for (int i = 0; i < playerRoot.childCount; i++)
             {
                 Transform child = playerRoot.GetChild(i);
+                if (!child.gameObject.activeSelf) continue;
                 if (child.GetComponent<SpriteRenderer>() == null) continue;
 
                 SelectableUnit unit = child.GetComponent<SelectableUnit>();
@@ -654,6 +679,7 @@ public class BattleManager : Singleton<BattleManager>
         }
         else
         {
+            playerUnits.RemoveAll(u => u == null || !u.gameObject.activeSelf);
             for (int i = 0; i < playerUnits.Count; i++)
             {
                 if (playerUnits[i] != null)
@@ -666,6 +692,7 @@ public class BattleManager : Singleton<BattleManager>
             for (int i = 0; i < enemyRoot.childCount; i++)
             {
                 Transform child = enemyRoot.GetChild(i);
+                if (!child.gameObject.activeSelf) continue;
                 if (child.GetComponent<SpriteRenderer>() == null) continue;
 
                 SelectableUnit unit = child.GetComponent<SelectableUnit>();
@@ -678,6 +705,7 @@ public class BattleManager : Singleton<BattleManager>
         }
         else
         {
+            enemyUnits.RemoveAll(u => u == null || !u.gameObject.activeSelf);
             for (int i = 0; i < enemyUnits.Count; i++)
             {
                 if (enemyUnits[i] != null)

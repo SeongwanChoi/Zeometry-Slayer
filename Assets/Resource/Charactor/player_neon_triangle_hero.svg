@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+<defs>
+ <filter id="neon" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="19" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+ <radialGradient id="core"><stop stop-color="#f4ffff"/><stop offset=".18" stop-color="#9cfaff"/><stop offset=".52" stop-color="#00eaff"/><stop offset="1" stop-color="#008cff" stop-opacity="0"/></radialGradient>
+ <linearGradient id="line" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#087cff"/><stop offset=".48" stop-color="#00efff"/><stop offset="1" stop-color="#7dfcff"/></linearGradient>
+</defs>
+<!-- electric aura -->
+<g fill="none" stroke="#00dfff" stroke-linejoin="round" filter="url(#neon)"><path d="M512 88 912 820H112Z" stroke-width="22" opacity=".34"/><path d="M512 88 912 820H112Z" stroke-width="9"/></g>
+<!-- layered sign tubing -->
+<path d="M512 145 862 786H162Z" fill="#03102b" fill-opacity=".72" stroke="url(#line)" stroke-width="12" stroke-linejoin="round"/>
+<path d="M512 222 795 746H229Z" fill="none" stroke="#087dff" stroke-width="8" opacity=".85" stroke-linejoin="round" filter="url(#neon)"/>
+<!-- geometric circuitry -->
+<g fill="none" stroke="#00dfff" stroke-linecap="round" stroke-linejoin="round" filter="url(#neon)">
+ <path d="M512 284V450M512 450 365 535M512 450 659 535M365 535 279 690M659 535 745 690M365 535H659M279 690H745" stroke-width="10"/>
+ <path d="M512 292V418M380 545 310 670M644 545 714 670" stroke="#a5ffff" stroke-width="4" opacity=".85"/>
+</g>
+<!-- reactor rings -->
+<circle cx="512" cy="508" r="145" fill="url(#core)" opacity=".48"/>
+<circle cx="512" cy="508" r="82" fill="none" stroke="#00eaff" stroke-width="12" filter="url(#neon)"/>
+<circle cx="512" cy="508" r="58" fill="#041c3d" stroke="#b9ffff" stroke-width="5"/>
+<circle cx="512" cy="508" r="34" fill="url(#core)"/>
+<circle cx="512" cy="508" r="11" fill="#ffffff"/>
+<!-- small powered nodes -->
+<g fill="#d8ffff" stroke="#00dcff" stroke-width="6" filter="url(#neon)"><circle cx="512" cy="284" r="12"/><circle cx="365" cy="535" r="10"/><circle cx="659" cy="535" r="10"/><circle cx="279" cy="690" r="10"/><circle cx="745" cy="690" r="10"/></g>
+<!-- base accents -->
+<path d="M370 770H654M410 792H614" stroke="#54f7ff" stroke-width="8" stroke-linecap="round" filter="url(#neon)"/>
+</svg>

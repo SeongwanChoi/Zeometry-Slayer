@@ -93,6 +93,9 @@ public class TurnUIController : MonoBehaviour
         centerBannerRect.gameObject.SetActive(true);
         centerBannerRect.SetAsLastSibling();
 
+        if (SoundManager.Ins != null)
+            SoundManager.Ins.PlayTurnTransition();
+
         // 1단계: 화면 가운데 왼쪽(startLeftX)에서 출발하여 정중앙(centerX)으로 이동
         float elapsed = 0f;
         while (elapsed < slideInDuration)

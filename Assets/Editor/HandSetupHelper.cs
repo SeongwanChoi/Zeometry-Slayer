@@ -55,18 +55,44 @@ public static class HandSetupHelper
         EnsureEffectTextureExists(slashPath, () => CombatEffectTextureGenerator.CreateSimpleHitSlashTexture(256));
         Sprite enemyHitSlashSprite = AssetDatabase.LoadAssetAtPath<Sprite>(slashPath);
 
+        // 4-1. 플레이어별(Player_1, Player_2, Player_3) 전용 공격 오라 & 타격 이펙트 6종 생성 및 로드
+        string[] specificAuraPaths =
+        {
+            "Assets/Resource/Effact/fx_player1_aura_triangle.png",
+            "Assets/Resource/Effact/fx_player2_aura_octagon.png",
+            "Assets/Resource/Effact/fx_player3_aura_pentagon.png"
+        };
+        string[] specificHitPaths =
+        {
+            "Assets/Resource/Effact/fx_player1_hit_prism_laser.png",
+            "Assets/Resource/Effact/fx_player2_hit_sonic_flurry.png",
+            "Assets/Resource/Effact/fx_player3_hit_buster_nova.png"
+        };
+        Sprite[] playerSpecificAuraSprites = new Sprite[3];
+        Sprite[] playerSpecificHitSprites = new Sprite[3];
+        for (int i = 0; i < 3; i++)
+        {
+            int idx = i;
+            EnsureEffectTextureExists(specificAuraPaths[idx], () => CombatEffectTextureGenerator.CreatePlayerSpecificAuraTexture(idx, 512));
+            playerSpecificAuraSprites[idx] = AssetDatabase.LoadAssetAtPath<Sprite>(specificAuraPaths[idx]);
+
+            EnsureEffectTextureExists(specificHitPaths[idx], () => CombatEffectTextureGenerator.CreatePlayerSpecificHitTexture(idx, 512));
+            playerSpecificHitSprites[idx] = AssetDatabase.LoadAssetAtPath<Sprite>(specificHitPaths[idx]);
+        }
+
         // 4-2. 버프용 깃털(Feather), 코스트 보석(Gem), 크리티컬 스타(Star) 아이콘 이미지 생성 및 로드
         string featherPath = "Assets/Resource/UI/icon_buff_feather.png";
         EnsureEffectTextureExists(featherPath, () => UnitStatusUI.CreateFeatherTexture(64, 64));
         Sprite featherBuffSprite = AssetDatabase.LoadAssetAtPath<Sprite>(featherPath);
 
-        string costGemPath = "Assets/Resource/UI/icon_cost_gem.png";
-        EnsureEffectTextureExists(costGemPath, () => BattleResourceUIManager.CreateCostGemTexture(48, 48));
-        Sprite costGemSprite = AssetDatabase.LoadAssetAtPath<Sprite>(costGemPath);
-
         string critStarPath = "Assets/Resource/UI/icon_critical_star.png";
         EnsureEffectTextureExists(critStarPath, () => BattleResourceUIManager.CreateCriticalStarTexture(96, 96));
         Sprite critStarSprite = AssetDatabase.LoadAssetAtPath<Sprite>(critStarPath);
+
+        // 4-3. 플레이어 스킬 아이콘 3종 (공격력 업, 방어력 업, 크리티컬 위력 업) 임포트 및 로드
+        Sprite skillAttackUpSprite = EnsureSpriteImported("Assets/Resource/UI/icon_skill_attack_up.png");
+        Sprite skillDefenseUpSprite = EnsureSpriteImported("Assets/Resource/UI/icon_skill_defense_up.png");
+        Sprite skillCritDamageUpSprite = EnsureSpriteImported("Assets/Resource/UI/icon_skill_crit_damage_up.png");
 
         // 5. 턴 UI 이미지 6종 (좌측 상단 상태 배지 3종 + 중앙 슬라이딩 배너 3종) 임포트 및 로드
         Sprite statusPlayerSprite = EnsureSpriteImported("Assets/Resource/UI/turn_status_player.png");
@@ -165,41 +191,24 @@ public static class HandSetupHelper
             SetObjRef(so, "redCardSprite", redCardSprite, ref sceneModified);
             SetObjRef(so, "blueCardSprite", blueCardSprite, ref sceneModified);
             SetObjRef(so, "greenCardSprite", greenCardSprite, ref sceneModified);
+
+            SerializedProperty maxHandProp = so.FindProperty("maxHandSize");
+            if (maxHandProp != null && maxHandProp.intValue < 10)
+            {
+                maxHandProp.intValue = 10;
+                sceneModified = true;
+            }
             so.ApplyModifiedPropertiesWithoutUndo();
+
+            existingHand.EnsureDeckAndDiscardUI();
         }
 
-        // 9. AttackBox 오브젝트 세팅 및 금색 숫자 스프라이트 배열(1~6) 자동 연결
-        AttackBoxManager existingAttackBox = Object.FindFirstObjectByType<AttackBoxManager>();
-        if (existingAttackBox == null)
+        // 9. 리메이크에서 AttackBox는 Spline 화살표 타겟팅 방식으로 대체되었으므로 비활성화 유지
+        Transform oldBoxTr = canvas.transform.Find("AttackBox");
+        if (oldBoxTr != null && oldBoxTr.gameObject.activeSelf)
         {
-            GameObject boxObj = new GameObject("AttackBox", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(AttackBoxManager));
-            boxObj.layer = LayerMask.NameToLayer("UI");
-            boxObj.transform.SetParent(canvas.transform, false);
-            boxObj.transform.SetAsFirstSibling();
-
-            RectTransform boxRect = boxObj.GetComponent<RectTransform>();
-            boxRect.anchorMin = new Vector2(0.5f, 0.5f);
-            boxRect.anchorMax = new Vector2(0.5f, 0.5f);
-            boxRect.pivot = new Vector2(0.5f, 0.5f);
-            boxRect.anchoredPosition = new Vector2(0f, 220f);
-            boxRect.sizeDelta = new Vector2(760f, 185f);
-
-            Image boxImg = boxObj.GetComponent<Image>();
-            boxImg.sprite = attackBoxSprite;
-            boxImg.type = Image.Type.Simple;
-            boxImg.raycastTarget = true;
-
-            existingAttackBox = boxObj.GetComponent<AttackBoxManager>();
+            oldBoxTr.gameObject.SetActive(false);
             sceneModified = true;
-        }
-
-        if (existingAttackBox != null)
-        {
-            SerializedObject boxSo = new SerializedObject(existingAttackBox);
-            SetObjRef(boxSo, "boxRectTransform", existingAttackBox.GetComponent<RectTransform>(), ref sceneModified);
-            SetObjRef(boxSo, "boxFrameImage", existingAttackBox.GetComponent<Image>(), ref sceneModified);
-            AssignSpriteArray(boxSo.FindProperty("orderNumberSprites"), goldNumberSprites, ref sceneModified);
-            boxSo.ApplyModifiedPropertiesWithoutUndo();
         }
 
         // 10. 좌측 상단 현재 턴 표시 UI (TurnStatusUI) & 중앙 슬라이딩 배너 UI (TurnBannerUI) 생성
@@ -258,11 +267,27 @@ public static class HandSetupHelper
             centerBannerImg = bannerTr.GetComponent<Image>();
         }
 
-        // 11. Player(Player_1~3) 및 Enemy(Enemy_1~3) 하위 오브젝트에 SelectableUnit 부착, 능력치 및 체력바/버프 UI 세팅
+        // 11. Player(Player_1~3) 및 Enemy(Enemy_1~3) 하위 오브젝트에 SelectableUnit 부착, 능력치 및 체력바/버프/스킬 UI 세팅
         GameObject playerRootObj = GameObject.Find("Player");
         GameObject enemyRootObj = GameObject.Find("Enemy");
-        List<SelectableUnit> playerUnitList = SetupSelectableChildren(playerRootObj != null ? playerRootObj.transform : null, true, featherBuffSprite, ref sceneModified);
-        List<SelectableUnit> enemyUnitList  = SetupSelectableChildren(enemyRootObj != null ? enemyRootObj.transform : null, false, featherBuffSprite, ref sceneModified);
+        List<SelectableUnit> playerUnitList = SetupSelectableChildren(
+            playerRootObj != null ? playerRootObj.transform : null,
+            true,
+            featherBuffSprite,
+            skillAttackUpSprite,
+            skillDefenseUpSprite,
+            skillCritDamageUpSprite,
+            ref sceneModified
+        );
+        List<SelectableUnit> enemyUnitList = SetupSelectableChildren(
+            enemyRootObj != null ? enemyRootObj.transform : null,
+            false,
+            featherBuffSprite,
+            skillAttackUpSprite,
+            skillDefenseUpSprite,
+            skillCritDamageUpSprite,
+            ref sceneModified
+        );
 
         // 12. BattleManager & TurnUIController 오브젝트 생성 및 참조 연결
         BattleManager battleManager = Object.FindFirstObjectByType<BattleManager>();
@@ -329,6 +354,8 @@ public static class HandSetupHelper
 
             AssignSpriteArray(fxSo.FindProperty("playerAuraSprites"), playerAuraSprites, ref sceneModified);
             SetObjRef(fxSo, "enemyHitSlashSprite", enemyHitSlashSprite, ref sceneModified);
+            AssignSpriteArray(fxSo.FindProperty("playerSpecificAuraSprites"), playerSpecificAuraSprites, ref sceneModified);
+            AssignSpriteArray(fxSo.FindProperty("playerSpecificHitSprites"), playerSpecificHitSprites, ref sceneModified);
             fxSo.ApplyModifiedPropertiesWithoutUndo();
         }
 
@@ -388,12 +415,50 @@ public static class HandSetupHelper
         if (resourceManager != null)
         {
             SerializedObject resSo = new SerializedObject(resourceManager);
-            SetObjRef(resSo, "costGemSprite", costGemSprite, ref sceneModified);
             SetObjRef(resSo, "criticalStarSprite", critStarSprite, ref sceneModified);
             resSo.ApplyModifiedPropertiesWithoutUndo();
 
             resourceManager.EnsureResourceUI();
             resourceManager.RefreshAllUI();
+        }
+
+        // 17. SkillConfirmModalUI 및 SplineTargetingArrow 자동 세팅
+        SkillConfirmModalUI skillModal = Object.FindFirstObjectByType<SkillConfirmModalUI>();
+        if (skillModal == null && battleManager != null)
+        {
+            skillModal = battleManager.gameObject.GetComponent<SkillConfirmModalUI>();
+            if (skillModal == null)
+            {
+                skillModal = battleManager.gameObject.AddComponent<SkillConfirmModalUI>();
+                sceneModified = true;
+            }
+        }
+        if (skillModal != null)
+        {
+            skillModal.EnsureModalUI();
+            skillModal.HideImmediate();
+        }
+
+        SplineTargetingArrow splineArrow = Object.FindFirstObjectByType<SplineTargetingArrow>();
+        if (splineArrow == null && battleManager != null)
+        {
+            splineArrow = battleManager.gameObject.GetComponent<SplineTargetingArrow>();
+            if (splineArrow == null)
+            {
+                splineArrow = battleManager.gameObject.AddComponent<SplineTargetingArrow>();
+                sceneModified = true;
+            }
+        }
+
+        // 18. TutorialManager가 씬에 존재하는 경우 스킬 아이콘 3종 스프라이트 참조 자동 연결
+        TutorialManager tutorialManager = Object.FindFirstObjectByType<TutorialManager>();
+        if (tutorialManager != null)
+        {
+            SerializedObject tutSo = new SerializedObject(tutorialManager);
+            SetObjRef(tutSo, "skillAttackUpSprite", skillAttackUpSprite, ref sceneModified);
+            SetObjRef(tutSo, "skillDefenseUpSprite", skillDefenseUpSprite, ref sceneModified);
+            SetObjRef(tutSo, "skillCritDamageUpSprite", skillCritDamageUpSprite, ref sceneModified);
+            tutSo.ApplyModifiedPropertiesWithoutUndo();
         }
 
         if (sceneModified)
@@ -404,7 +469,14 @@ public static class HandSetupHelper
         }
     }
 
-    private static List<SelectableUnit> SetupSelectableChildren(Transform root, bool isPlayer, Sprite featherSprite, ref bool modified)
+    private static List<SelectableUnit> SetupSelectableChildren(
+        Transform root,
+        bool isPlayer,
+        Sprite featherSprite,
+        Sprite atkSkillSprite,
+        Sprite defSkillSprite,
+        Sprite critSkillSprite,
+        ref bool modified)
     {
         List<SelectableUnit> list = new List<SelectableUnit>();
         if (root == null) return list;
@@ -412,6 +484,7 @@ public static class HandSetupHelper
         for (int i = 0; i < root.childCount; i++)
         {
             Transform child = root.GetChild(i);
+            if (!child.gameObject.activeSelf) continue;
             if (child.GetComponent<SpriteRenderer>() == null) continue;
 
             BoxCollider2D boxCol = child.GetComponent<BoxCollider2D>();
@@ -467,7 +540,7 @@ public static class HandSetupHelper
 
             uSo.ApplyModifiedPropertiesWithoutUndo();
 
-            unit.EnsureStatusUI(featherSprite);
+            unit.EnsureStatusUI(featherSprite, atkSkillSprite, defSkillSprite, critSkillSprite);
             unit.RefreshStatusUI();
             if (unit.StatusUI != null)
             {
@@ -477,6 +550,30 @@ public static class HandSetupHelper
                 {
                     EditorUtility.SetDirty(unit.StatusUI.transform);
                     modified = true;
+                }
+            }
+
+            if (isPlayer)
+            {
+                unit.EnsureSkillUI(atkSkillSprite, defSkillSprite, critSkillSprite);
+                unit.RefreshSkillUI();
+                if (unit.SkillUI != null)
+                {
+                    SerializedObject uSoSkill = new SerializedObject(unit);
+                    if (uSoSkill.FindProperty("skillUI").objectReferenceValue != unit.SkillUI)
+                    {
+                        uSoSkill.FindProperty("skillUI").objectReferenceValue = unit.SkillUI;
+                        uSoSkill.ApplyModifiedPropertiesWithoutUndo();
+                        modified = true;
+                    }
+
+                    Vector3 prevSkillPos = unit.SkillUI.transform.localPosition;
+                    unit.SkillUI.UpdatePosition();
+                    if ((unit.SkillUI.transform.localPosition - prevSkillPos).sqrMagnitude > 0.01f)
+                    {
+                        EditorUtility.SetDirty(unit.SkillUI.transform);
+                        modified = true;
+                    }
                 }
             }
 
@@ -543,7 +640,17 @@ public static class HandSetupHelper
             importer.SaveAndReimport();
         }
 
-        return AssetDatabase.LoadAssetAtPath<Sprite>(assetPath);
+        Sprite loaded = AssetDatabase.LoadAssetAtPath<Sprite>(assetPath);
+        if (loaded == null)
+        {
+            Object[] subAssets = AssetDatabase.LoadAllAssetsAtPath(assetPath);
+            for (int i = 0; i < subAssets.Length; i++)
+            {
+                if (subAssets[i] is Sprite sp)
+                    return sp;
+            }
+        }
+        return loaded;
     }
 
     private static void AssignSpriteArray(SerializedProperty arrayProp, Sprite[] sprites, ref bool modified)

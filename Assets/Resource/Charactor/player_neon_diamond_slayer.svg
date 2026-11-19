@@ -1,0 +1,152 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+<defs>
+  <!-- Authentic Neon Glass Tube Glow Filters -->
+  <filter id="neon-glow" x="-50%" y="-50%" width="200%" height="200%">
+    <feGaussianBlur stdDeviation="22" result="blur1"/>
+    <feGaussianBlur stdDeviation="10" result="blur2"/>
+    <feMerge>
+      <feMergeNode in="blur1"/>
+      <feMergeNode in="blur2"/>
+      <feMergeNode in="SourceGraphic"/>
+    </feMerge>
+  </filter>
+  <filter id="neon-soft" x="-40%" y="-40%" width="180%" height="180%">
+    <feGaussianBlur stdDeviation="14" result="soft"/>
+    <feMerge>
+      <feMergeNode in="soft"/>
+      <feMergeNode in="SourceGraphic"/>
+    </feMerge>
+  </filter>
+
+  <!-- Gradients -->
+  <radialGradient id="core-cyan" cx="50%" cy="50%" r="50%">
+    <stop offset="0%" stop-color="#ffffff"/>
+    <stop offset="25%" stop-color="#7dfcff"/>
+    <stop offset="60%" stop-color="#00efff"/>
+    <stop offset="90%" stop-color="#0080ff" stop-opacity="0.8"/>
+    <stop offset="100%" stop-color="#002b80" stop-opacity="0"/>
+  </radialGradient>
+  <radialGradient id="core-magenta" cx="50%" cy="50%" r="50%">
+    <stop offset="0%" stop-color="#ffffff"/>
+    <stop offset="30%" stop-color="#ff7be5"/>
+    <stop offset="70%" stop-color="#ff007f"/>
+    <stop offset="100%" stop-color="#7a0050" stop-opacity="0"/>
+  </radialGradient>
+  <linearGradient id="neon-cyan-grad" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0%" stop-color="#ffffff"/>
+    <stop offset="40%" stop-color="#00ffff"/>
+    <stop offset="100%" stop-color="#0077ff"/>
+  </linearGradient>
+  <linearGradient id="neon-pink-grad" x1="0" y1="1" x2="1" y2="0">
+    <stop offset="0%" stop-color="#ff00aa"/>
+    <stop offset="60%" stop-color="#ff3388"/>
+    <stop offset="100%" stop-color="#ffffff"/>
+  </linearGradient>
+  <linearGradient id="blade-grad" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#00ffff"/>
+    <stop offset="50%" stop-color="#7000ff"/>
+    <stop offset="100%" stop-color="#ff0077"/>
+  </linearGradient>
+</defs>
+
+<!-- Dark Cyber Matrix Background Ring -->
+<circle cx="512" cy="512" r="460" fill="#040714" stroke="#0e1e38" stroke-width="6"/>
+<circle cx="512" cy="512" r="430" fill="none" stroke="#00ffff" stroke-width="2" stroke-dasharray="14 18" opacity="0.35"/>
+<circle cx="512" cy="512" r="380" fill="none" stroke="#ff007f" stroke-width="2" stroke-dasharray="8 26" opacity="0.3"/>
+
+<!-- Dual Floating Neon Energy Wing Blades (Left) -->
+<g fill="none" stroke="#00ffff" filter="url(#neon-glow)">
+  <!-- Outer Blade Shard -->
+  <path d="M430 310 L160 140 L240 380 L390 390 Z" fill="#031526" fill-opacity="0.75" stroke="url(#neon-cyan-grad)" stroke-width="10" stroke-linejoin="round"/>
+  <path d="M410 325 L210 190 L265 360 L380 370 Z" stroke="#ffffff" stroke-width="4" opacity="0.9"/>
+  <!-- Lower Shard -->
+  <path d="M410 460 L180 500 L260 620 L380 540 Z" fill="#031526" fill-opacity="0.75" stroke="#00ffff" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M390 470 L230 505 L285 585 L370 530 Z" stroke="#99ffff" stroke-width="3" opacity="0.85"/>
+</g>
+
+<!-- Dual Floating Neon Energy Wing Blades (Right) -->
+<g fill="none" stroke="#ff007f" filter="url(#neon-glow)">
+  <!-- Outer Blade Shard -->
+  <path d="M594 310 L864 140 L784 380 L634 390 Z" fill="#1f0518" fill-opacity="0.75" stroke="url(#neon-pink-grad)" stroke-width="10" stroke-linejoin="round"/>
+  <path d="M614 325 L814 190 L759 360 L644 370 Z" stroke="#ffffff" stroke-width="4" opacity="0.9"/>
+  <!-- Lower Shard -->
+  <path d="M614 460 L844 500 L764 620 L644 540 Z" fill="#1f0518" fill-opacity="0.75" stroke="#ff007f" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M634 470 L794 505 L739 585 L654 530 Z" stroke="#ffb3dd" stroke-width="3" opacity="0.85"/>
+</g>
+
+<!-- Main Diamond Exoskeleton Chassis -->
+<!-- Outer Glow Aura -->
+<polygon points="512,110 820,512 512,914 204,512" fill="none" stroke="#00eaff" stroke-width="26" opacity="0.25" filter="url(#neon-glow)"/>
+<polygon points="512,110 820,512 512,914 204,512" fill="none" stroke="#ff007f" stroke-width="16" opacity="0.35" filter="url(#neon-glow)"/>
+
+<!-- Dark Glass Body Shield -->
+<polygon points="512,130 800,512 512,894 224,512" fill="#040b1a" fill-opacity="0.92" stroke="url(#blade-grad)" stroke-width="12" stroke-linejoin="round" filter="url(#neon-soft)"/>
+<polygon points="512,170 760,512 512,854 264,512" fill="none" stroke="#00ffff" stroke-width="6" opacity="0.8" stroke-linejoin="round"/>
+
+<!-- Cybernetic Visor / Helm (Hexagonal Crown) -->
+<g filter="url(#neon-glow)">
+  <polygon points="512,210 590,260 590,350 512,400 434,350 434,260" fill="#061830" stroke="#00ffff" stroke-width="8" stroke-linejoin="round"/>
+  <!-- Visor Neon Slit -->
+  <polygon points="512,270 560,305 560,340 512,370 464,340 464,305" fill="#ff007f" fill-opacity="0.35" stroke="#ff007f" stroke-width="6"/>
+  <polyline points="475,320 512,290 549,320" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="512" cy="335" r="9" fill="#ffffff" filter="url(#neon-soft)"/>
+</g>
+
+<!-- Chest Reactor Core (Diamond Tri-Fusion Core) -->
+<g filter="url(#neon-glow)">
+  <!-- Outer Energy Aura -->
+  <circle cx="512" cy="512" r="130" fill="url(#core-cyan)" opacity="0.55"/>
+  <circle cx="512" cy="512" r="90" fill="url(#core-magenta)" opacity="0.4"/>
+  
+  <!-- Outer Reactor Ring -->
+  <circle cx="512" cy="512" r="85" fill="none" stroke="#00ffff" stroke-width="8" stroke-dasharray="24 12"/>
+  <circle cx="512" cy="512" r="68" fill="#06122b" stroke="#ff007f" stroke-width="6"/>
+  
+  <!-- Rotating Geometric Core (Diamond Inscribed) -->
+  <polygon points="512,456 568,512 512,568 456,512" fill="#00ffff" fill-opacity="0.4" stroke="#ffffff" stroke-width="6"/>
+  <polygon points="512,475 549,512 512,549 475,512" fill="#ffffff" stroke="#ff007f" stroke-width="4"/>
+  <circle cx="512" cy="512" r="16" fill="#ffffff"/>
+</g>
+
+<!-- Geometric Conduit Lines & Circuitry -->
+<g fill="none" stroke-linecap="round" stroke-linejoin="round" filter="url(#neon-soft)">
+  <!-- Upward Conduits to Shoulders -->
+  <path d="M512 400 L512 430" stroke="#00ffff" stroke-width="8"/>
+  <path d="M434 350 L330 420 L330 512" stroke="#00ffff" stroke-width="8"/>
+  <path d="M590 350 L694 420 L694 512" stroke="#ff007f" stroke-width="8"/>
+  
+  <!-- Downward Conduits to Lower Apex -->
+  <path d="M456 512 L350 600 L512 760" stroke="#00ffff" stroke-width="8"/>
+  <path d="M568 512 L674 600 L512 760" stroke="#ff007f" stroke-width="8"/>
+  <path d="M512 594 L512 760" stroke="#ffffff" stroke-width="6" opacity="0.9"/>
+  <path d="M512 760 L512 840" stroke="#00ffff" stroke-width="10"/>
+
+  <!-- High-bright internal filaments -->
+  <path d="M444 358 L345 425" stroke="#ffffff" stroke-width="3" opacity="0.9"/>
+  <path d="M580 358 L679 425" stroke="#ffffff" stroke-width="3" opacity="0.9"/>
+  <path d="M365 600 L512 745 L659 600" stroke="#ffb3dd" stroke-width="4"/>
+</g>
+
+<!-- Neon Power Nodes (Glowing Vertex Capacitors) -->
+<g fill="#ffffff" stroke-width="6" filter="url(#neon-glow)">
+  <!-- Top & Side Vertices -->
+  <circle cx="512" cy="130" r="14" stroke="#00ffff" fill="#ffffff"/>
+  <circle cx="800" cy="512" r="14" stroke="#ff007f" fill="#ffffff"/>
+  <circle cx="512" cy="894" r="14" stroke="#00ffff" fill="#ffffff"/>
+  <circle cx="224" cy="512" r="14" stroke="#00ffff" fill="#ffffff"/>
+  
+  <!-- Inner Junction Nodes -->
+  <circle cx="330" cy="420" r="10" stroke="#00ffff" fill="#7dfcff"/>
+  <circle cx="694" cy="420" r="10" stroke="#ff007f" fill="#ff99dd"/>
+  <circle cx="350" cy="600" r="10" stroke="#00ffff" fill="#7dfcff"/>
+  <circle cx="674" cy="600" r="10" stroke="#ff007f" fill="#ff99dd"/>
+  <circle cx="512" cy="760" r="12" stroke="#ffffff" fill="#00ffff"/>
+</g>
+
+<!-- Neon Energy Accent Bars (Bottom Thruster Rails) -->
+<g stroke-linecap="round" filter="url(#neon-glow)">
+  <line x1="420" y1="840" x2="604" y2="840" stroke="#ff007f" stroke-width="10"/>
+  <line x1="450" y1="865" x2="574" y2="865" stroke="#00ffff" stroke-width="8"/>
+  <line x1="480" y1="888" x2="544" y2="888" stroke="#ffffff" stroke-width="6"/>
+</g>
+</svg>

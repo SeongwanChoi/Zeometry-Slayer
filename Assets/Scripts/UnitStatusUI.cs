@@ -3,7 +3,8 @@ using UnityEngine.UI;
 
 /// <summary>
 /// 각 Player 및 Enemy 오브젝트 아래에 표시되는 체력바(Unity 자체 UI)와
-/// 체력바 아래 왼쪽에 단일 깃털(버프) 이미지 + 우측 상단(제곱 위치)에 작은 버프 수치를 표시하는 UI를 관리합니다.
+/// 체력바 아래에 표시되는 버프 아이콘(적의 FeatherBuffSingle 및 플레이어의 스킬 버프 3종) +
+/// 각 버프 이미지의 우측 하단에 표시되는 중첩 수치를 관리합니다.
 /// </summary>
 [ExecuteAlways]
 public class UnitStatusUI : MonoBehaviour
@@ -18,11 +19,22 @@ public class UnitStatusUI : MonoBehaviour
     [SerializeField] private Image hpFillImage;
     [SerializeField] private Text hpValueText;
 
-    [Header("버프(깃털 1개 + 제곱 형태 숫자) UI 참조")]
+    [Header("버프(단일 아이콘 + 우측 하단 중첩 숫자) UI 참조")]
     [SerializeField] private RectTransform buffContainerRect;
     [SerializeField] private Image singleFeatherImage;
     [SerializeField] private Text buffExponentText;
     [SerializeField] private Sprite featherBuffSprite;
+
+    [Header("플레이어 스킬 버프 아이콘 UI 참조")]
+    [SerializeField] private Image attackBuffIconImage;
+    [SerializeField] private Text attackBuffCountText;
+    [SerializeField] private Image defenseBuffIconImage;
+    [SerializeField] private Text defenseBuffCountText;
+    [SerializeField] private Image critBuffIconImage;
+    [SerializeField] private Text critBuffCountText;
+    [SerializeField] private Sprite attackBuffSprite;
+    [SerializeField] private Sprite defenseBuffSprite;
+    [SerializeField] private Sprite critBuffSprite;
 
     [Header("위치 및 크기 설정")]
     [SerializeField] private Vector3 worldOffset = new Vector3(0f, -0.78f, 0f);
@@ -32,17 +44,26 @@ public class UnitStatusUI : MonoBehaviour
     private Canvas parentCanvas;
     private RectTransform canvasRect;
 
-    private static Sprite cachedSolidWhiteSprite;
     private static Sprite cachedFeatherSprite;
-    private static Font cachedFont;
 
     public CanvasGroup CanvasGroup => canvasGroup;
 
-    public void Initialize(SelectableUnit unit, Sprite customFeatherSprite = null)
+    public void Initialize(
+        SelectableUnit unit,
+        Sprite customFeatherSprite = null,
+        Sprite atkSkillSprite = null,
+        Sprite defSkillSprite = null,
+        Sprite critSkillSprite = null)
     {
         targetUnit = unit;
         if (customFeatherSprite != null)
             featherBuffSprite = customFeatherSprite;
+        if (atkSkillSprite != null)
+            attackBuffSprite = atkSkillSprite;
+        if (defSkillSprite != null)
+            defenseBuffSprite = defSkillSprite;
+        if (critSkillSprite != null)
+            critBuffSprite = critSkillSprite;
 
         EnsureUIHierarchy();
         UpdatePosition();
@@ -64,6 +85,7 @@ public class UnitStatusUI : MonoBehaviour
         }
 
         UpdatePosition();
+        EnforceBuffContainerLeftZero();
     }
 
     /// <summary>
@@ -86,49 +108,16 @@ public class UnitStatusUI : MonoBehaviour
 
         if (parentCanvas == null || canvasRect == null) return;
 
-        Camera worldCam = (parentCanvas.renderMode != RenderMode.ScreenSpaceOverlay && parentCanvas.worldCamera != null)
-            ? parentCanvas.worldCamera
-            : Camera.main;
-
-        if (worldCam == null) return;
-
-        Vector3 unitBaseWorldPos = targetUnit.WorldBasePosition + worldOffset;
-
-        // 직교(Orthographic) 2D 카메라 환경에서는 에디터 창 포커스(Scene 뷰 / Inspector 뷰)에 의해
-        // WorldToScreenPoint 해상도가 흔들리지 않도록 Canvas 높이 기준 월드->캔버스 비율로 직접 변환합니다.
-        // 이 계산값은 Play 모드 실행 시의 위치값과 정확히 일치합니다.
-        if (worldCam.orthographic && worldCam.orthographicSize > 0.001f)
-        {
-            float canvasHeight = canvasRect.rect.height;
-            if (canvasHeight <= 1f)
-            {
-                CanvasScaler scaler = parentCanvas.GetComponent<CanvasScaler>();
-                canvasHeight = scaler != null ? scaler.referenceResolution.y : 1080f;
-            }
-
-            float pixelsPerWorldUnit = canvasHeight / (worldCam.orthographicSize * 2f);
-            Vector3 camPos = worldCam.transform.position;
-
-            float localX = (unitBaseWorldPos.x - camPos.x) * pixelsPerWorldUnit;
-            float localY = (unitBaseWorldPos.y - camPos.y) * pixelsPerWorldUnit;
-
-            rootRect.anchoredPosition = new Vector2(localX, localY);
-            rootRect.localPosition = new Vector3(localX, localY, 0f);
-            return;
-        }
-
-        Camera uiCam = parentCanvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : worldCam;
-        Vector2 screenPoint = RectTransformUtility.WorldToScreenPoint(worldCam, unitBaseWorldPos);
-
-        if (RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, screenPoint, uiCam, out Vector2 localPt))
-        {
-            rootRect.anchoredPosition = localPt;
-            rootRect.localPosition = new Vector3(localPt.x, localPt.y, 0f);
-        }
+        UIHelper.SyncRectTransformToWorldPosition(
+            rootRect,
+            parentCanvas,
+            canvasRect,
+            targetUnit.WorldBasePosition + worldOffset
+        );
     }
 
     /// <summary>
-    /// 현재 체력/최대 체력 및 버프(단일 깃털 + 우상단 제곱 숫자)를 UI에 즉시 반영합니다.
+    /// 현재 체력/최대 체력 및 버프(단일 아이콘 + 우측 하단 중첩 숫자)를 UI에 즉시 반영합니다.
     /// </summary>
     public void RefreshStatus(float currentHp, float maxHp, int buffCount)
     {
@@ -154,43 +143,138 @@ public class UnitStatusUI : MonoBehaviour
         if (hpValueText != null)
         {
             int maxInt = Mathf.RoundToInt(safeMax);
-            // 소수점(.5 등) 데미지가 있을 때는 소수 첫째 자리까지, 정수일 때는 정수로 깔끔하게 표시
-            string curStr = Mathf.Approximately(clampedHp % 1f, 0f)
-                ? Mathf.RoundToInt(clampedHp).ToString()
-                : clampedHp.ToString("0.#");
+            string curStr = UIHelper.FormatCompactNumber(clampedHp);
             hpValueText.text = $"{curStr}/{maxInt}";
         }
 
-        RefreshFeatherBuffDisplay(Mathf.Max(0, buffCount));
+        int atkStacks = targetUnit != null ? targetUnit.GetSkillBuffStacks(ESkillType.ATTACK_UP) : 0;
+        int defStacks = targetUnit != null ? targetUnit.GetSkillBuffStacks(ESkillType.DEFENSE_UP) : 0;
+        int critStacks = targetUnit != null ? targetUnit.GetSkillBuffStacks(ESkillType.CRIT_DAMAGE_UP) : 0;
+
+        RefreshAllBuffDisplays(Mathf.Max(0, buffCount), atkStacks, defStacks, critStacks);
     }
 
     /// <summary>
-    /// 버프가 1씩 늘어날 때마다 깃털 이미지를 여러 개 늘리지 않고,
-    /// 단일 깃털 이미지 우측 상단에 숫자 제곱(지수)처럼 작게 버프 수치를 표기합니다.
+    /// 적의 FeatherBuffSingle 및 플레이어의 스킬 버프 아이콘들을 체력바 아래에 나란히 표시하고,
+    /// 각 버프 이미지의 우측 하단에 중첩 숫자를 표기합니다.
     /// </summary>
-    private void RefreshFeatherBuffDisplay(int count)
+    private void RefreshAllBuffDisplays(int featherCount, int atkStacks, int defStacks, int critStacks)
     {
         if (buffContainerRect == null) return;
 
-        bool hasBuff = count > 0;
-        buffContainerRect.gameObject.SetActive(hasBuff);
+        EnforceBuffContainerLeftZero();
 
-        if (!hasBuff) return;
+        bool hasFeather = featherCount > 0;
+        bool hasAtk = atkStacks > 0;
+        bool hasDef = defStacks > 0;
+        bool hasCrit = critStacks > 0;
+        bool hasAnyBuff = hasFeather || hasAtk || hasDef || hasCrit;
 
+        buffContainerRect.gameObject.SetActive(hasAnyBuff);
+        if (!hasAnyBuff)
+        {
+            if (singleFeatherImage != null) singleFeatherImage.gameObject.SetActive(false);
+            if (attackBuffIconImage != null) attackBuffIconImage.gameObject.SetActive(false);
+            if (defenseBuffIconImage != null) defenseBuffIconImage.gameObject.SetActive(false);
+            if (critBuffIconImage != null) critBuffIconImage.gameObject.SetActive(false);
+            return;
+        }
+
+        int slotIndex = 0;
+        float stepX = featherIconSize.x + 8f;
+
+        // 1. 깃털 버프 (FeatherBuffSingle)
         if (featherBuffSprite == null)
             featherBuffSprite = GetOrCreateFeatherSprite();
 
-        if (singleFeatherImage != null)
+        UpdateSingleBuffSlot(
+            singleFeatherImage,
+            buffExponentText,
+            featherBuffSprite,
+            featherCount,
+            ref slotIndex,
+            stepX
+        );
+
+        // 2. 공격력 업 버프 (SkillBuff_AttackUp)
+        if (attackBuffSprite == null)
+            attackBuffSprite = PlayerSkillUI.GetOrCreateSkillSprite(ESkillType.ATTACK_UP);
+
+        UpdateSingleBuffSlot(
+            attackBuffIconImage,
+            attackBuffCountText,
+            attackBuffSprite,
+            atkStacks,
+            ref slotIndex,
+            stepX
+        );
+
+        // 3. 방어력 업 버프 (SkillBuff_DefenseUp)
+        if (defenseBuffSprite == null)
+            defenseBuffSprite = PlayerSkillUI.GetOrCreateSkillSprite(ESkillType.DEFENSE_UP);
+
+        UpdateSingleBuffSlot(
+            defenseBuffIconImage,
+            defenseBuffCountText,
+            defenseBuffSprite,
+            defStacks,
+            ref slotIndex,
+            stepX
+        );
+
+        // 4. 크리티컬 위력 업 버프 (SkillBuff_CritDamageUp)
+        if (critBuffSprite == null)
+            critBuffSprite = PlayerSkillUI.GetOrCreateSkillSprite(ESkillType.CRIT_DAMAGE_UP);
+
+        UpdateSingleBuffSlot(
+            critBuffIconImage,
+            critBuffCountText,
+            critBuffSprite,
+            critStacks,
+            ref slotIndex,
+            stepX
+        );
+    }
+
+    private void UpdateSingleBuffSlot(
+        Image iconImg,
+        Text countTxt,
+        Sprite sprite,
+        int stackCount,
+        ref int slotIndex,
+        float stepX)
+    {
+        if (iconImg == null) return;
+
+        if (stackCount <= 0)
         {
-            singleFeatherImage.sprite = featherBuffSprite;
-            singleFeatherImage.gameObject.SetActive(true);
+            iconImg.gameObject.SetActive(false);
+            return;
         }
 
-        if (buffExponentText != null)
+        iconImg.sprite = sprite;
+        iconImg.gameObject.SetActive(true);
+
+        RectTransform rt = iconImg.GetComponent<RectTransform>();
+        if (rt != null)
         {
-            buffExponentText.text = count.ToString();
-            buffExponentText.gameObject.SetActive(true);
+            float posX = 2f + (slotIndex * stepX);
+            rt.anchorMin = new Vector2(0f, 1f);
+            rt.anchorMax = new Vector2(0f, 1f);
+            rt.pivot = new Vector2(0f, 1f);
+            rt.anchoredPosition = new Vector2(posX, -2f);
+            rt.sizeDelta = featherIconSize;
+            rt.localScale = Vector3.one;
         }
+
+        if (countTxt != null)
+        {
+            ApplyBottomRightCountTextLayout(countTxt);
+            countTxt.text = stackCount.ToString();
+            countTxt.gameObject.SetActive(true);
+        }
+
+        slotIndex++;
     }
 
     public void SetAlpha(float alpha)
@@ -302,7 +386,7 @@ public class UnitStatusUI : MonoBehaviour
             }
         }
 
-        // 3. 체력 수치 텍스트 (예: 250/250, 50/50)
+        // 3. 체력 수치 텍스트 (예: 250/250, 50/50) - 항상 HP바 정중앙 정렬 보장
         if (hpValueText == null)
         {
             Transform txtTr = bgRect.Find("HPValueText");
@@ -311,28 +395,7 @@ public class UnitStatusUI : MonoBehaviour
                 GameObject txtObj = new GameObject("HPValueText", typeof(RectTransform), typeof(CanvasRenderer), typeof(Text), typeof(Outline));
                 txtObj.layer = LayerMask.NameToLayer("UI");
                 txtObj.transform.SetParent(bgRect, false);
-
-                RectTransform txtRect = txtObj.GetComponent<RectTransform>();
-                txtRect.anchorMin = Vector2.zero;
-                txtRect.anchorMax = Vector2.one;
-                txtRect.offsetMin = Vector2.zero;
-                txtRect.offsetMax = Vector2.zero;
-                txtRect.localScale = Vector3.one;
-                txtRect.localPosition = Vector3.zero;
-
                 hpValueText = txtObj.GetComponent<Text>();
-                hpValueText.font = GetOrCreateFont();
-                hpValueText.fontSize = 15;
-                hpValueText.fontStyle = FontStyle.Bold;
-                hpValueText.alignment = TextAnchor.MiddleCenter;
-                hpValueText.color = Color.white;
-                hpValueText.horizontalOverflow = HorizontalWrapMode.Overflow;
-                hpValueText.verticalOverflow = VerticalWrapMode.Overflow;
-                hpValueText.raycastTarget = false;
-
-                Outline txtOutline = txtObj.GetComponent<Outline>();
-                txtOutline.effectColor = new Color(0.28f, 0.02f, 0.04f, 0.98f);
-                txtOutline.effectDistance = new Vector2(1.5f, -1.5f);
             }
             else
             {
@@ -340,7 +403,36 @@ public class UnitStatusUI : MonoBehaviour
             }
         }
 
-        // 4. 체력바 아래 왼쪽: 단일 깃털 이미지 + 우측 상단 제곱(지수) 위치에 버프 숫자 표시
+        if (hpValueText != null)
+        {
+            RectTransform txtRect = hpValueText.rectTransform;
+            txtRect.anchorMin = Vector2.zero;
+            txtRect.anchorMax = Vector2.one;
+            txtRect.pivot = new Vector2(0.5f, 0.5f);
+            txtRect.anchoredPosition = Vector2.zero;
+            txtRect.sizeDelta = Vector2.zero;
+            txtRect.offsetMin = Vector2.zero;
+            txtRect.offsetMax = Vector2.zero;
+            txtRect.localScale = Vector3.one;
+            txtRect.localPosition = Vector3.zero;
+
+            hpValueText.font = GetOrCreateFont();
+            hpValueText.fontSize = 15;
+            hpValueText.fontStyle = FontStyle.Bold;
+            hpValueText.alignment = TextAnchor.MiddleCenter;
+            hpValueText.color = Color.white;
+            hpValueText.horizontalOverflow = HorizontalWrapMode.Overflow;
+            hpValueText.verticalOverflow = VerticalWrapMode.Overflow;
+            hpValueText.raycastTarget = false;
+
+            Outline txtOutline = hpValueText.GetComponent<Outline>();
+            if (txtOutline == null)
+                txtOutline = hpValueText.gameObject.AddComponent<Outline>();
+            txtOutline.effectColor = new Color(0.28f, 0.02f, 0.04f, 0.98f);
+            txtOutline.effectDistance = new Vector2(1.5f, -1.5f);
+        }
+
+        // 4. 체력바 아래 버프 컨테이너: 적 FeatherBuffSingle 및 플레이어 스킬 버프 3종 (중첩 숫자는 모두 우측 하단 통일)
         if (buffContainerRect == null)
         {
             Transform buffTr = rootRect.Find("BuffContainer");
@@ -349,32 +441,25 @@ public class UnitStatusUI : MonoBehaviour
                 GameObject buffObj = new GameObject("BuffContainer", typeof(RectTransform));
                 buffObj.layer = LayerMask.NameToLayer("UI");
                 buffObj.transform.SetParent(rootRect, false);
-
                 buffContainerRect = buffObj.GetComponent<RectTransform>();
-                buffContainerRect.anchorMin = new Vector2(0f, 0f);
-                buffContainerRect.anchorMax = new Vector2(1f, 0f);
-                buffContainerRect.pivot = new Vector2(0f, 1f);
-                buffContainerRect.anchoredPosition = new Vector2(0f, -4f);
-                buffContainerRect.sizeDelta = new Vector2(0f, 28f);
-                buffContainerRect.localScale = Vector3.one;
-                buffContainerRect.localPosition = new Vector3(0f, -(hpBarSize.y * 0.5f) - 4f, 0f);
             }
             else
             {
                 buffContainerRect = buffTr.GetComponent<RectTransform>();
-                // 이전에 GridLayoutGroup이나 다중 깃털 아이콘이 생성되어 있었다면 정리
-                GridLayoutGroup oldGrid = buffContainerRect.GetComponent<GridLayoutGroup>();
-                if (oldGrid != null)
-                {
-                    if (Application.isPlaying) Destroy(oldGrid);
-                    else DestroyImmediate(oldGrid);
-                }
             }
         }
 
         if (buffContainerRect != null)
         {
-            // 이전 방식의 다중 깃털 오브젝트(FeatherBuff_1, 2...)가 남아있다면 제거
+            GridLayoutGroup oldGrid = buffContainerRect.GetComponent<GridLayoutGroup>();
+            if (oldGrid != null)
+            {
+                if (Application.isPlaying) Destroy(oldGrid);
+                else DestroyImmediate(oldGrid);
+            }
+
+            EnforceBuffContainerLeftZero();
+
             for (int i = buffContainerRect.childCount - 1; i >= 0; i--)
             {
                 Transform child = buffContainerRect.GetChild(i);
@@ -385,102 +470,162 @@ public class UnitStatusUI : MonoBehaviour
                 }
             }
 
-            // 단일 깃털 아이콘 (FeatherBuffSingle) 생성 또는 연결
-            if (singleFeatherImage == null)
+            // 4-1. 적/공통 깃털 버프 아이콘 (FeatherBuffSingle)
+            EnsureBuffIconWithCountText(
+                "FeatherBuffSingle",
+                "BuffExponentText",
+                featherBuffSprite != null ? featherBuffSprite : GetOrCreateFeatherSprite(),
+                2f,
+                ref singleFeatherImage,
+                ref buffExponentText
+            );
+
+            // 4-2. 플레이어 스킬 버프 3종 아이콘 (HP바 아래에 FeatherBuffSingle처럼 작게 표시 + 우측 하단 중첩 숫자)
+            EnsureBuffIconWithCountText(
+                "SkillBuff_AttackUp",
+                "BuffExponentText",
+                attackBuffSprite != null ? attackBuffSprite : PlayerSkillUI.GetOrCreateSkillSprite(ESkillType.ATTACK_UP),
+                2f,
+                ref attackBuffIconImage,
+                ref attackBuffCountText
+            );
+
+            EnsureBuffIconWithCountText(
+                "SkillBuff_DefenseUp",
+                "BuffExponentText",
+                defenseBuffSprite != null ? defenseBuffSprite : PlayerSkillUI.GetOrCreateSkillSprite(ESkillType.DEFENSE_UP),
+                31f,
+                ref defenseBuffIconImage,
+                ref defenseBuffCountText
+            );
+
+            EnsureBuffIconWithCountText(
+                "SkillBuff_CritDamageUp",
+                "BuffExponentText",
+                critBuffSprite != null ? critBuffSprite : PlayerSkillUI.GetOrCreateSkillSprite(ESkillType.CRIT_DAMAGE_UP),
+                60f,
+                ref critBuffIconImage,
+                ref critBuffCountText
+            );
+        }
+    }
+
+    /// <summary>
+    /// 플레이어와 적의 BuffContainer RectTransform의 Left(offsetMin.x) 값을 항상 0으로 고정합니다.
+    /// </summary>
+    private void EnforceBuffContainerLeftZero()
+    {
+        if (buffContainerRect == null) return;
+
+        buffContainerRect.anchorMin = new Vector2(0f, 0f);
+        buffContainerRect.anchorMax = new Vector2(1f, 0f);
+        buffContainerRect.pivot = new Vector2(0f, 1f);
+        buffContainerRect.anchoredPosition = new Vector2(0f, -4f);
+        buffContainerRect.sizeDelta = new Vector2(0f, 28f);
+        buffContainerRect.offsetMin = new Vector2(0f, -32f);
+        buffContainerRect.offsetMax = new Vector2(0f, -4f);
+        buffContainerRect.localScale = Vector3.one;
+    }
+
+    private void EnsureBuffIconWithCountText(
+        string iconObjectName,
+        string textObjectName,
+        Sprite defaultSprite,
+        float defaultPosX,
+        ref Image iconImgRef,
+        ref Text countTxtRef)
+    {
+        if (iconImgRef == null)
+        {
+            Transform existingIconTr = buffContainerRect.Find(iconObjectName);
+            if (existingIconTr == null)
             {
-                Transform singleTr = buffContainerRect.Find("FeatherBuffSingle");
-                if (singleTr == null)
+                GameObject iconObj = new GameObject(iconObjectName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+                iconObj.layer = LayerMask.NameToLayer("UI");
+                iconObj.transform.SetParent(buffContainerRect, false);
+
+                RectTransform rt = iconObj.GetComponent<RectTransform>();
+                rt.anchorMin = new Vector2(0f, 1f);
+                rt.anchorMax = new Vector2(0f, 1f);
+                rt.pivot = new Vector2(0f, 1f);
+                rt.anchoredPosition = new Vector2(defaultPosX, -2f);
+                rt.sizeDelta = featherIconSize;
+                rt.localScale = Vector3.one;
+
+                iconImgRef = iconObj.GetComponent<Image>();
+                iconImgRef.sprite = defaultSprite;
+                iconImgRef.preserveAspect = true;
+                iconImgRef.raycastTarget = false;
+            }
+            else
+            {
+                iconImgRef = existingIconTr.GetComponent<Image>();
+            }
+        }
+
+        if (iconImgRef != null)
+        {
+            if (countTxtRef == null)
+            {
+                Transform expTr = iconImgRef.transform.Find(textObjectName);
+                if (expTr == null)
                 {
-                    GameObject iconObj = new GameObject("FeatherBuffSingle", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-                    iconObj.layer = LayerMask.NameToLayer("UI");
-                    iconObj.transform.SetParent(buffContainerRect, false);
-
-                    RectTransform rt = iconObj.GetComponent<RectTransform>();
-                    rt.anchorMin = new Vector2(0f, 1f);
-                    rt.anchorMax = new Vector2(0f, 1f);
-                    rt.pivot = new Vector2(0f, 1f);
-                    rt.anchoredPosition = new Vector2(2f, -2f);
-                    rt.sizeDelta = featherIconSize;
-                    rt.localScale = Vector3.one;
-
-                    singleFeatherImage = iconObj.GetComponent<Image>();
-                    singleFeatherImage.sprite = featherBuffSprite != null ? featherBuffSprite : GetOrCreateFeatherSprite();
-                    singleFeatherImage.preserveAspect = true;
-                    singleFeatherImage.raycastTarget = false;
+                    GameObject expObj = new GameObject(textObjectName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Text), typeof(Outline));
+                    expObj.layer = LayerMask.NameToLayer("UI");
+                    expObj.transform.SetParent(iconImgRef.transform, false);
+                    countTxtRef = expObj.GetComponent<Text>();
                 }
                 else
                 {
-                    singleFeatherImage = singleTr.GetComponent<Image>();
+                    countTxtRef = expTr.GetComponent<Text>();
                 }
             }
 
-            // 깃털 이미지 우측 상단에 숫자 제곱(지수)처럼 작게 표시되는 텍스트 (BuffExponentText)
-            if (singleFeatherImage != null && buffExponentText == null)
+            if (countTxtRef != null)
             {
-                Transform expTr = singleFeatherImage.transform.Find("BuffExponentText");
-                if (expTr == null)
-                {
-                    GameObject expObj = new GameObject("BuffExponentText", typeof(RectTransform), typeof(CanvasRenderer), typeof(Text), typeof(Outline));
-                    expObj.layer = LayerMask.NameToLayer("UI");
-                    expObj.transform.SetParent(singleFeatherImage.transform, false);
-
-                    RectTransform expRect = expObj.GetComponent<RectTransform>();
-                    // 깃털 이미지의 우측 상단 모서리(제곱 위치)에 배치
-                    expRect.anchorMin = new Vector2(1f, 1f);
-                    expRect.anchorMax = new Vector2(1f, 1f);
-                    expRect.pivot = new Vector2(0.5f, 0.5f);
-                    expRect.anchoredPosition = new Vector2(4f, 2f);
-                    expRect.sizeDelta = new Vector2(26f, 18f);
-                    expRect.localScale = Vector3.one;
-
-                    buffExponentText = expObj.GetComponent<Text>();
-                    buffExponentText.font = GetOrCreateFont();
-                    buffExponentText.fontSize = 13;
-                    buffExponentText.fontStyle = FontStyle.Bold;
-                    buffExponentText.alignment = TextAnchor.UpperLeft;
-                    buffExponentText.color = new Color(1f, 0.96f, 0.72f, 1f);
-                    buffExponentText.horizontalOverflow = HorizontalWrapMode.Overflow;
-                    buffExponentText.verticalOverflow = VerticalWrapMode.Overflow;
-                    buffExponentText.raycastTarget = false;
-
-                    Outline expOutline = expObj.GetComponent<Outline>();
-                    expOutline.effectColor = new Color(0.02f, 0.05f, 0.12f, 0.98f);
-                    expOutline.effectDistance = new Vector2(1.4f, -1.4f);
-                }
-                else
-                {
-                    buffExponentText = expTr.GetComponent<Text>();
-                }
+                ApplyBottomRightCountTextLayout(countTxtRef);
             }
         }
     }
 
-    private static Font GetOrCreateFont()
+    /// <summary>
+    /// 버프 중첩 숫자를 버프 이미지의 우측 하단(Bottom-Right)에 통일된 규칙으로 배치합니다.
+    /// </summary>
+    private void ApplyBottomRightCountTextLayout(Text txt)
     {
-        if (cachedFont != null) return cachedFont;
+        if (txt == null) return;
 
-        string[] fontCandidates = { "Malgun Gothic", "맑은 고딕", "Arial" };
-        cachedFont = Font.CreateDynamicFontFromOSFont(fontCandidates, 16);
-        if (cachedFont == null)
-            cachedFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        RectTransform expRect = txt.GetComponent<RectTransform>();
+        if (expRect != null)
+        {
+            expRect.anchorMin = new Vector2(1f, 0f);
+            expRect.anchorMax = new Vector2(1f, 0f);
+            expRect.pivot = new Vector2(1f, 0f);
+            expRect.anchoredPosition = new Vector2(5f, -3f);
+            expRect.sizeDelta = new Vector2(26f, 18f);
+            expRect.localScale = Vector3.one;
+            expRect.localPosition = new Vector3((featherIconSize.x * 0.5f) + 5f, -(featherIconSize.y * 0.5f) - 3f, 0f);
+        }
 
-        return cachedFont;
+        txt.font = GetOrCreateFont();
+        txt.fontSize = 13;
+        txt.fontStyle = FontStyle.Bold;
+        txt.alignment = TextAnchor.LowerRight;
+        txt.color = new Color(1f, 0.96f, 0.72f, 1f);
+        txt.horizontalOverflow = HorizontalWrapMode.Overflow;
+        txt.verticalOverflow = VerticalWrapMode.Overflow;
+        txt.raycastTarget = false;
+
+        Outline expOutline = txt.GetComponent<Outline>();
+        if (expOutline == null)
+            expOutline = txt.gameObject.AddComponent<Outline>();
+        expOutline.effectColor = new Color(0.02f, 0.05f, 0.12f, 0.98f);
+        expOutline.effectDistance = new Vector2(1.4f, -1.4f);
     }
 
-    public static Sprite GetOrCreateSolidWhiteSprite()
-    {
-        if (cachedSolidWhiteSprite != null) return cachedSolidWhiteSprite;
+    private static Font GetOrCreateFont() => UIHelper.GetOrCreateFont();
 
-        Texture2D tex = new Texture2D(4, 4, TextureFormat.RGBA32, false);
-        Color[] cols = new Color[16];
-        for (int i = 0; i < 16; i++) cols[i] = Color.white;
-        tex.SetPixels(cols);
-        tex.Apply();
-
-        cachedSolidWhiteSprite = Sprite.Create(tex, new Rect(0, 0, 4, 4), new Vector2(0.5f, 0.5f), 100f);
-        cachedSolidWhiteSprite.name = "ui_solid_white";
-        return cachedSolidWhiteSprite;
-    }
+    public static Sprite GetOrCreateSolidWhiteSprite() => UIHelper.GetOrCreateSolidWhiteSprite();
 
     public static Sprite GetOrCreateFeatherSprite()
     {

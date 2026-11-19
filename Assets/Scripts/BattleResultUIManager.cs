@@ -19,7 +19,6 @@ public class BattleResultUIManager : Singleton<BattleResultUIManager>
 
     private bool isResultShowing = false;
     private bool isVictoryMode = false;
-    private static Font cachedKoreanFont;
 
     public bool IsResultShowing => isResultShowing;
 
@@ -32,27 +31,36 @@ public class BattleResultUIManager : Singleton<BattleResultUIManager>
 
     /// <summary>
     /// 모든 Enemy가 사망했을 때: 화면 가운데 승리 UI와 [게임 종료] 버튼을 표시합니다.
+    /// (튜토리얼 씬인 경우 튜토리얼 완료 안내 및 [실전 배틀 시작] 버튼으로 전환)
     /// </summary>
     public void ShowVictoryUI()
     {
+        if (TutorialManager.Ins != null)
+            TutorialManager.Ins.HideGuide();
+
         EnsureResultUI();
         isResultShowing = true;
         isVictoryMode = true;
 
+        bool isTutorial = SceneManager.GetActiveScene().name.Contains("Tutorial");
+
         if (titleText != null)
         {
-            titleText.text = "승 리";
+            titleText.text = isTutorial ? "튜토리얼 완료!" : "승 리";
             titleText.color = new Color(0.45f, 0.96f, 1.0f, 1.0f);
+            titleText.alignment = TextAnchor.MiddleCenter;
         }
 
         if (subTitleText != null)
         {
-            subTitleText.text = "모든 적을 처치했습니다!";
+            subTitleText.text = isTutorial ? "기초 전투 규칙을 모두 습득하셨습니다!" : "모든 적을 처치했습니다!";
+            subTitleText.alignment = TextAnchor.MiddleCenter;
         }
 
         if (actionButtonText != null)
         {
-            actionButtonText.text = "게임 종료";
+            actionButtonText.text = isTutorial ? "실전 배틀 시작" : "게임 종료";
+            actionButtonText.alignment = TextAnchor.MiddleCenter;
         }
 
         if (resultOverlayPanel != null)
@@ -60,6 +68,9 @@ public class BattleResultUIManager : Singleton<BattleResultUIManager>
             resultOverlayPanel.transform.SetAsLastSibling();
             resultOverlayPanel.SetActive(true);
         }
+
+        if (SoundManager.Ins != null)
+            SoundManager.Ins.PlayVictory();
     }
 
     /// <summary>
@@ -67,6 +78,9 @@ public class BattleResultUIManager : Singleton<BattleResultUIManager>
     /// </summary>
     public void ShowDefeatUI()
     {
+        if (TutorialManager.Ins != null)
+            TutorialManager.Ins.HideGuide();
+
         EnsureResultUI();
         isResultShowing = true;
         isVictoryMode = false;
@@ -75,16 +89,19 @@ public class BattleResultUIManager : Singleton<BattleResultUIManager>
         {
             titleText.text = "패 배";
             titleText.color = new Color(1.0f, 0.28f, 0.36f, 1.0f);
+            titleText.alignment = TextAnchor.MiddleCenter;
         }
 
         if (subTitleText != null)
         {
             subTitleText.text = "모든 플레이어가 쓰러졌습니다";
+            subTitleText.alignment = TextAnchor.MiddleCenter;
         }
 
         if (actionButtonText != null)
         {
             actionButtonText.text = "다시하기";
+            actionButtonText.alignment = TextAnchor.MiddleCenter;
         }
 
         if (resultOverlayPanel != null)
@@ -92,6 +109,9 @@ public class BattleResultUIManager : Singleton<BattleResultUIManager>
             resultOverlayPanel.transform.SetAsLastSibling();
             resultOverlayPanel.SetActive(true);
         }
+
+        if (SoundManager.Ins != null)
+            SoundManager.Ins.PlayDefeat();
     }
 
     public void HideResultUI()
@@ -103,8 +123,19 @@ public class BattleResultUIManager : Singleton<BattleResultUIManager>
 
     private void OnActionButtonClicked()
     {
+        if (SoundManager.Ins != null)
+            SoundManager.Ins.PlayUIClick();
+
         if (isVictoryMode)
         {
+            if (SceneManager.GetActiveScene().name.Contains("Tutorial"))
+            {
+                Time.timeScale = 1f;
+                isResultShowing = false;
+                SceneManager.LoadScene("BattleScene");
+                return;
+            }
+
             QuitApplication();
         }
         else
@@ -217,12 +248,27 @@ public class BattleResultUIManager : Singleton<BattleResultUIManager>
 
         if (resultWindowRect != null)
         {
+            resultWindowRect.anchorMin = new Vector2(0.5f, 0.5f);
+            resultWindowRect.anchorMax = new Vector2(0.5f, 0.5f);
+            resultWindowRect.pivot = new Vector2(0.5f, 0.5f);
+            resultWindowRect.anchoredPosition = Vector2.zero;
+            resultWindowRect.sizeDelta = new Vector2(540f, 340f);
+            resultWindowRect.localScale = Vector3.one;
+            resultWindowRect.localPosition = Vector3.zero;
+
             if (titleText == null)
             {
                 Transform t = resultWindowRect.Find("ResultTitleText");
                 titleText = t != null
                     ? t.GetComponent<Text>()
-                    : CreateText(resultWindowRect, "ResultTitleText", "승 리", 44, FontStyle.Bold, new Color(0.45f, 0.96f, 1f, 1f), new Vector2(0f, 82f), new Vector2(440f, 64f));
+                    : CreateText(resultWindowRect, "ResultTitleText", "승 리", 42, FontStyle.Bold, new Color(0.45f, 0.96f, 1f, 1f), new Vector2(0f, 88f), new Vector2(480f, 64f));
+            }
+            if (titleText != null)
+            {
+                NormalizeCenteredRect(titleText.rectTransform, new Vector2(0f, 88f), new Vector2(480f, 64f));
+                titleText.fontSize = 42;
+                titleText.fontStyle = FontStyle.Bold;
+                titleText.alignment = TextAnchor.MiddleCenter;
             }
 
             if (subTitleText == null)
@@ -230,7 +276,13 @@ public class BattleResultUIManager : Singleton<BattleResultUIManager>
                 Transform st = resultWindowRect.Find("ResultSubTitleText");
                 subTitleText = st != null
                     ? st.GetComponent<Text>()
-                    : CreateText(resultWindowRect, "ResultSubTitleText", "", 20, FontStyle.Normal, new Color(0.84f, 0.90f, 0.98f, 0.95f), new Vector2(0f, 22f), new Vector2(460f, 42f));
+                    : CreateText(resultWindowRect, "ResultSubTitleText", "", 21, FontStyle.Normal, new Color(0.84f, 0.90f, 0.98f, 0.95f), new Vector2(0f, 18f), new Vector2(480f, 44f));
+            }
+            if (subTitleText != null)
+            {
+                NormalizeCenteredRect(subTitleText.rectTransform, new Vector2(0f, 18f), new Vector2(480f, 44f));
+                subTitleText.fontSize = 21;
+                subTitleText.alignment = TextAnchor.MiddleCenter;
             }
 
             if (actionButton == null)
@@ -255,15 +307,6 @@ public class BattleResultUIManager : Singleton<BattleResultUIManager>
                     btnObj.layer = LayerMask.NameToLayer("UI");
                     btnObj.transform.SetParent(resultWindowRect, false);
 
-                    RectTransform btnRt = btnObj.GetComponent<RectTransform>();
-                    btnRt.anchorMin = new Vector2(0.5f, 0.5f);
-                    btnRt.anchorMax = new Vector2(0.5f, 0.5f);
-                    btnRt.pivot = new Vector2(0.5f, 0.5f);
-                    btnRt.anchoredPosition = new Vector2(0f, -66f);
-                    btnRt.sizeDelta = new Vector2(260f, 72f);
-                    btnRt.localScale = Vector3.one;
-                    btnRt.localPosition = new Vector3(0f, -66f, 0f);
-
                     Image btnImg = btnObj.GetComponent<Image>();
                     btnImg.sprite = PauseMenuManager.GetOrCreateButtonSprite();
                     btnImg.color = Color.white;
@@ -276,21 +319,37 @@ public class BattleResultUIManager : Singleton<BattleResultUIManager>
                         btnObj.transform,
                         "ActionButtonText",
                         "게임 종료",
-                        28,
+                        26,
                         FontStyle.Bold,
                         Color.white,
                         Vector2.zero,
-                        new Vector2(240f, 64f)
+                        new Vector2(300f, 64f)
                     );
                 }
             }
 
             if (actionButton != null)
             {
+                RectTransform btnRt = actionButton.GetComponent<RectTransform>();
+                NormalizeCenteredRect(btnRt, new Vector2(0f, -72f), new Vector2(320f, 72f));
+
                 actionButton.onClick.RemoveListener(OnActionButtonClicked);
                 actionButton.onClick.AddListener(OnActionButtonClicked);
             }
+
+            if (actionButtonText != null)
+            {
+                NormalizeCenteredRect(actionButtonText.rectTransform, Vector2.zero, new Vector2(300f, 64f));
+                actionButtonText.fontSize = 26;
+                actionButtonText.fontStyle = FontStyle.Bold;
+                actionButtonText.alignment = TextAnchor.MiddleCenter;
+            }
         }
+    }
+
+    private static void NormalizeCenteredRect(RectTransform rt, Vector2 anchoredPos, Vector2 sizeDelta)
+    {
+        UIHelper.ConfigureCenteredRect(rt, anchoredPos, sizeDelta);
     }
 
     private static Text CreateText(
@@ -303,46 +362,18 @@ public class BattleResultUIManager : Singleton<BattleResultUIManager>
         Vector2 anchoredPos,
         Vector2 sizeDelta)
     {
-        GameObject obj = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Text), typeof(Outline));
-        obj.layer = LayerMask.NameToLayer("UI");
-        obj.transform.SetParent(parent, false);
-
-        RectTransform rt = obj.GetComponent<RectTransform>();
-        rt.anchorMin = new Vector2(0.5f, 0.5f);
-        rt.anchorMax = new Vector2(0.5f, 0.5f);
-        rt.pivot = new Vector2(0.5f, 0.5f);
-        rt.anchoredPosition = anchoredPos;
-        rt.sizeDelta = sizeDelta;
-        rt.localScale = Vector3.one;
-        rt.localPosition = new Vector3(anchoredPos.x, anchoredPos.y, 0f);
-
-        Text txt = obj.GetComponent<Text>();
-        txt.font = GetOrCreateFont();
-        txt.text = content;
-        txt.fontSize = fontSize;
-        txt.fontStyle = style;
-        txt.color = color;
-        txt.alignment = TextAnchor.MiddleCenter;
-        txt.horizontalOverflow = HorizontalWrapMode.Overflow;
-        txt.verticalOverflow = VerticalWrapMode.Overflow;
-        txt.raycastTarget = false;
-
-        Outline outline = obj.GetComponent<Outline>();
-        outline.effectColor = new Color(0f, 0.05f, 0.15f, 0.95f);
-        outline.effectDistance = new Vector2(2f, -2f);
-
-        return txt;
-    }
-
-    private static Font GetOrCreateFont()
-    {
-        if (cachedKoreanFont != null) return cachedKoreanFont;
-
-        string[] fontCandidates = { "Malgun Gothic", "맑은 고딕", "NanumGothic", "Gulim", "Arial" };
-        cachedKoreanFont = Font.CreateDynamicFontFromOSFont(fontCandidates, 28);
-        if (cachedKoreanFont == null)
-            cachedKoreanFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-
-        return cachedKoreanFont;
+        return UIHelper.CreateOutlinedText(
+            parent,
+            name,
+            content,
+            fontSize,
+            style,
+            color,
+            anchoredPos,
+            sizeDelta,
+            TextAnchor.MiddleCenter,
+            new Color(0f, 0.05f, 0.15f, 0.95f),
+            new Vector2(2f, -2f)
+        );
     }
 }

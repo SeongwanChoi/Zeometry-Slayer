@@ -114,6 +114,10 @@ MonoBehaviour:
   attackBoxDarkColor: {r: 0.6117647, g: 0.59607846, b: 0.59607846, a: 1}
   orderNumberImage: {fileID: 8195904928496856867}
   orderNumberSize: {x: 68, y: 68}
+  cardCost: 1
+  costText: {fileID: 0}
+  handCostOffset: {x: 26.5, y: -26.5}
+  boxCostOffset: {x: 15.5, y: -15.5}
 --- !u!1 &8670362099466537050
 GameObject:
   m_ObjectHideFlags: 0

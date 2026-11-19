@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Zeometry Slayer - 클래스 다이어그램 (Class Diagram)</title>
+  <style>
+    :root {
+      --bg: #0b1120;
+      --panel: #111827;
+      --border: #1e293b;
+      --cyan: #38bdf8;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      padding: 24px;
+    }
+    header {
+      max-width: 1600px;
+      margin: 0 auto 20px auto;
+      padding: 20px 28px;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      border: 1px solid #334155;
+      border-left: 5px solid var(--cyan);
+      border-radius: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    header h1 {
+      font-size: 24px;
+      color: var(--cyan);
+      margin-bottom: 6px;
+    }
+    header p {
+      font-size: 14px;
+      color: var(--muted);
+    }
+    .toolbar {
+      display: flex;
+      gap: 8px;
+    }
+    .toolbar button {
+      background: #1e293b;
+      color: var(--text);
+      border: 1px solid #475569;
+      padding: 8px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      transition: all 0.15s;
+    }
+    .toolbar button:hover {
+      background: var(--cyan);
+      color: #0f172a;
+      border-color: var(--cyan);
+    }
+    .diagram-wrapper {
+      max-width: 1600px;
+      margin: 0 auto;
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 28px;
+      overflow: auto;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+    }
+    #diagramContainer {
+      transform-origin: top left;
+      transition: transform 0.15s ease;
+      min-width: 1100px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Zeometry Slayer — 프로젝트 클래스 다이어그램 (UML Class Diagram)</h1>
+      <p>별도 프로그램 없이 웹 브라우저(Chrome, Edge 등)에서 바로 열람 가능한 다이어그램입니다.</p>
+    </div>
+    <div class="toolbar">
+      <button onclick="zoom(0.15)">확대 (+)</button>
+      <button onclick="zoom(-0.15)">축소 (-)</button>
+      <button onclick="resetZoom()">원래 크기 (100%)</button>
+      <button onclick="window.print()">인쇄 / PDF 저장</button>
+    </div>
+  </header>
+
+  <div class="diagram-wrapper">
+    <div id="diagramContainer">
+      <pre class="mermaid">
+classDiagram
+    direction TB
+
+    class Singleton~T~ {
+        &lt;&lt;abstract&gt;&gt;
+        -static T instance
+        +static T Ins$
+        #Awake() void
+        +Init() void
+    }
+
+    class ETurn {
+        &lt;&lt;enumeration&gt;&gt;
+        PLAYER = 1
+        ENEMY = 2
+        ATTACK = 3
+    }
+
+    class ECardColor {
+        &lt;&lt;enumeration&gt;&gt;
+        RED = 0
+        BLUE = 1
+        GREEN = 2
+        BUSTER = 0
+        ARTS = 1
+        QUICK = 2
+    }
+
+    class EHitReactionStyle {
+        &lt;&lt;enumeration&gt;&gt;
+        HorizontalShakeOnly = 0
+        ShakeWithFlashAndKnockback = 1
+        CyberGlitchSplit = 2
+    }
+
+    class CardTypeExtensions {
+        &lt;&lt;static&gt;&gt;
+        +GetCardName(ECardColor cardColor)$ string
+    }
+
+    class BattleManager {
+        -ETurn currunt_Turn
+        -int currentTurnNumber
+        -TurnUIController turnUIController
+        -List~SelectableUnit~ playerUnits
+        -List~SelectableUnit~ enemyUnits
+        -SelectableUnit selectedPlayer
+        -SelectableUnit selectedEnemy
+        -float selectedScaleMultiplier
+        -float attackStepInterval
+        -float enemyAttackInterval
+        -int totalEnemyActions
+        -int maxActionsPerEnemy
+        -bool isAttackPhaseRunning
+        -bool isBattleEnded
+        +bool IsPlayerInputAllowed
+        +SelectableUnit SelectedPlayer
+        +SelectableUnit SelectedEnemy
+        +ETurn CurrentTurn
+        +OnUnitClicked(SelectableUnit clickedUnit) void
+        +SelectPlayerUnit(SelectableUnit targetPlayer) void
+        +SelectEnemyUnit(SelectableUnit targetEnemy) void
+        +CheckAutoEndPlayerTurn() void
+        +TurnEnd() void
+        -CoStartPlayerTurn() IEnumerator
+        -CoExecuteAttackPhase() IEnumerator
+        -CoExecuteEnemyTurn() IEnumerator
+        -IncrementAllTurnBuffs() void
+        -BuildEnemyActionQueue() List~SelectableUnit~
+        +EnsureSceneReferences() void
+    }
+
+    class HandManager {
+        -RectTransform handContainer
+        -Card cardPrefab
+        -Vector2 cardSize
+        -Sprite redCardSprite
+        -Sprite blueCardSprite
+        -Sprite greenCardSprite
+        -int maxHandSize
+        -float cardSpacing
+        -float angleStep
+        -float arcDropPerStep
+        -Dictionary~int, List~ECardColor~~ playerHandData
+        -Dictionary~int, SelectableUnit~ playerUnitMap
+        -List~Card~ handCards
+        -int currentSelectedPlayerIndex
+        +int CurrentHandCount
+        +int CurrentSelectedPlayerIndex
+        +DealRandomHandsForAllPlayers(IReadOnlyList~SelectableUnit~ players) void
+        +ShowPlayerHand(int playerIndex) void
+        +SetHandVisibility(bool visible) void
+        +DetachCardFromHand(Card targetCard) void
+        +ReturnCardToHand(Card targetCard) void
+        +UpdateHandLayout() void
+        +GetSpriteForColor(ECardColor color) Sprite
+    }
+
+    class AttackBoxManager {
+        -RectTransform boxRectTransform
+        -int requiredCardCount
+        -Vector2 boxCardSize
+        -float leftPadding
+        -float cardSpacing
+        -Sprite[] orderNumberSprites
+        -Image boxFrameImage
+        -List~Card~ queuedCards
+        +int CurrentCardCount
+        +int RequiredCardCount
+        +bool IsReadyToExecute
+        +IReadOnlyList~Card~ QueuedCards
+        +IsPointerOverBox(PointerEventData eventData) bool
+        +TryAddCard(Card card) bool
+        +ReturnCardToHand(Card card) void
+        +DistributeStarsRandomly(int totalStars) void
+        +ConsumeLeftmostCard(out ECardColor, out SelectableUnit, out int) bool
+        +ClearAllQueuedCards() void
+        +UpdateBoxLayout() void
+    }
+
+    class BattleResourceUIManager {
+        -int maxCost
+        -int currentCost
+        -int currentStars
+        -RectTransform costTrayRoot
+        -Text costValueText
+        -List~Image~ costGemImages
+        -RectTransform starCounterRoot
+        -Image starIconImage
+        -Text starCountText
+        +int MaxCost
+        +int CurrentCost
+        +int CurrentStars
+        +AddCost(int amount) void
+        +TrySpendCost(int amount) bool
+        +AddStars(int amount) void
+        +ConsumeAllStarsForAttackPhase() int
+        +RefreshAllUI() void
+        +RefreshCostUI() void
+        +RefreshStarUI() void
+    }
+
+    class CombatEffectManager {
+        -Sprite[] playerAuraSprites
+        -Sprite enemyHitSlashSprite
+        -EHitReactionStyle hitReactionStyle
+        -float auraDuration
+        -float slashDuration
+        -float shakeDuration
+        +PlayCardAttackSequence(SelectableUnit attacker, ECardColor color, SelectableUnit target) IEnumerator
+        +PlayPlayerHitSequenceOnUnit(SelectableUnit targetPlayer) IEnumerator
+        +PlayPlayerAttackAura(SpriteRenderer targetSr, ECardColor auraColor) void
+        +PlayEnemyHit(SpriteRenderer targetEnemySr, float delay) void
+    }
+
+    class PauseMenuManager {
+        -GameObject pauseOverlayPanel
+        -RectTransform menuWindowRect
+        -Button quitGameButton
+        -bool isPaused
+        +bool IsPaused
+        +TogglePauseMenu() void
+        +SetPauseMenuOpen(bool open) void
+        +QuitGame() void
+        +GetOrCreateWindowSprite()$ Sprite
+        +GetOrCreateButtonSprite()$ Sprite
+    }
+
+    class BattleResultUIManager {
+        -GameObject resultOverlayPanel
+        -RectTransform resultWindowRect
+        -Text titleText
+        -Text subTitleText
+        -Button actionButton
+        -bool isResultShowing
+        -bool isVictoryMode
+        +bool IsResultShowing
+        +ShowVictoryUI() void
+        +ShowDefeatUI() void
+        +HideResultUI() void
+        +QuitApplication() void
+        +RestartFromBeginning() void
+    }
+
+    class SelectableUnit {
+        -bool isPlayerUnit
+        -int unitIndex
+        -float maxHp
+        -float currentHp
+        -float minAttack
+        -float maxAttack
+        -int buffCount
+        -bool incrementBuffEveryTurn
+        -float selectedScaleMultiplier
+        -float deathFadeDuration
+        -UnitStatusUI statusUI
+        +bool IsPlayerUnit
+        +int UnitIndex
+        +bool IsSelected
+        +bool IsDead
+        +float MaxHp
+        +float CurrentHp
+        +int BuffCount
+        +Vector3 WorldBasePosition
+        +InitializeUnit(bool isPlayer, int index, float scaleMultiplier) void
+        +EnsureStatsConfigured(bool forceResetToDefault) void
+        +CalculateAttackDamage() float
+        +IncrementTurnBuff(int amount) void
+        +TakeDamage(float damage) bool
+        -Die() void
+        -CoFadeOutAndDie() IEnumerator
+        +SetSelected(bool selected, float customScaleMultiplier) void
+        +OnPointerClick(PointerEventData eventData) void
+        +RefreshStatusUI() void
+    }
+
+    class UnitStatusUI {
+        -SelectableUnit targetUnit
+        -RectTransform rootRect
+        -CanvasGroup canvasGroup
+        -RectTransform hpFillRect
+        -Image hpFillImage
+        -Text hpValueText
+        -RectTransform buffContainerRect
+        -Image singleFeatherImage
+        -Text buffExponentText
+        -Vector3 worldOffset
+        +Initialize(SelectableUnit unit, Sprite customFeatherSprite) void
+        +UpdatePosition() void
+        +RefreshStatus(float currentHp, float maxHp, int buffCount) void
+        -RefreshFeatherBuffDisplay(int count) void
+        +SetAlpha(float alpha) void
+        +CreateFeatherTexture(int width, int height)$ Texture2D
+    }
+
+    class Card {
+        -string cardName
+        -ECardColor cardColor
+        -int ownerPlayerIndex
+        -SelectableUnit ownerPlayerUnit
+        -int assignedStars
+        -Image orderNumberImage
+        -Text cardTypeLabelText
+        -Text critStarBadgeText
+        -int savedHandIndex
+        -bool isInAttackBox
+        +string CardName
+        +ECardColor CardColor
+        +int OwnerPlayerIndex
+        +SelectableUnit OwnerPlayerUnit
+        +bool IsInAttackBox
+        +int AssignedStars
+        +float CriticalChancePercent
+        +SetupCard(int playerIdx, SelectableUnit owner, ECardColor color, Sprite sprite, int handIdx) void
+        +SetAssignedStars(int stars) void
+        +SetCardTransform(Vector2 pos, Quaternion rot, int siblingIdx) void
+        +SetAttackBoxTransform(RectTransform parent, Vector2 pos, Vector2 size, int idx, Sprite orderSprite) void
+        +OnPointerEnter(PointerEventData eventData) void
+        +OnPointerExit(PointerEventData eventData) void
+        +OnBeginDrag(PointerEventData eventData) void
+        +OnDrag(PointerEventData eventData) void
+        +OnEndDrag(PointerEventData eventData) void
+    }
+
+    class TurnUIController {
+        -Image topLeftTurnImage
+        -RectTransform centerBannerRect
+        -Image centerBannerImage
+        -float centerHoldDuration
+        -float slideInDuration
+        -float slideOutDuration
+        +float CenterHoldDuration
+        +UpdateTopLeftStatus(ETurn turn) void
+        +PlayTurnTransitionRoutine(ETurn turn, float overrideHoldDuration) IEnumerator
+    }
+
+    class CombatEffectTextureGenerator {
+        &lt;&lt;static&gt;&gt;
+        +CreatePlayerCommonAuraTexture(ECardColor colorType, int size)$ Texture2D
+        +CreateSimpleHitSlashTexture(int size)$ Texture2D
+    }
+
+    class GoldNumberTextureGenerator {
+        &lt;&lt;static&gt;&gt;
+        +CreateGoldNumberTexture(int number, int width, int height)$ Texture2D
+    }
+
+    Singleton~T~ &lt;|-- BattleManager
+    Singleton~T~ &lt;|-- HandManager
+    Singleton~T~ &lt;|-- AttackBoxManager
+    Singleton~T~ &lt;|-- BattleResourceUIManager
+    Singleton~T~ &lt;|-- CombatEffectManager
+    Singleton~T~ &lt;|-- PauseMenuManager
+    Singleton~T~ &lt;|-- BattleResultUIManager
+
+    BattleManager --&gt; ETurn : manages phase
+    BattleManager "1" --&gt; "1" TurnUIController : controls banner &amp; status
+    BattleManager "1" --&gt; "3..6" SelectableUnit : manages players &amp; enemies
+    BattleManager ..&gt; HandManager : deals hands &amp; toggles visibility
+    BattleManager ..&gt; AttackBoxManager : distributes stars &amp; consumes 6 cards
+    BattleManager ..&gt; BattleResourceUIManager : adds Cost/Stars &amp; consumes Stars
+    BattleManager ..&gt; CombatEffectManager : plays attack aura &amp; hit shake
+    BattleManager ..&gt; BattleResultUIManager : shows Victory / Defeat UI
+    BattleManager ..&gt; PauseMenuManager : checks IsPaused
+
+    SelectableUnit "1" &lt;--&gt; "1" UnitStatusUI : updates HP bar &amp; Feather^n buff
+    SelectableUnit ..&gt; BattleManager : notifies OnUnitClicked
+
+    HandManager "1" o-- "0..6" Card : pools &amp; arches hand cards
+    HandManager ..&gt; SelectableUnit : binds card owner
+
+    AttackBoxManager "1" o-- "0..6" Card : queues up to 6 cards
+    AttackBoxManager ..&gt; HandManager : detaches / returns card
+    AttackBoxManager ..&gt; GoldNumberTextureGenerator : generates 1~6 sprites
+
+    Card --&gt; ECardColor : Buster / Arts / Quick
+    Card --&gt; SelectableUnit : references OwnerPlayerUnit
+    Card ..&gt; AttackBoxManager : drag &amp; drop interaction
+    Card ..&gt; CardTypeExtensions : resolves card name
+
+    CombatEffectManager --&gt; EHitReactionStyle : uses shake mode
+    CombatEffectManager ..&gt; CombatEffectTextureGenerator : generates aura &amp; slash
+
+    BattleResultUIManager ..&gt; PauseMenuManager : shares window/button sprites
+      </pre>
+    </div>
+  </div>
+
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'default',
+      securityLevel: 'loose',
+      class: {
+        useMaxWidth: false
+      }
+    });
+  </script>
+  <script>
+    let currentScale = 1.0;
+    const container = document.getElementById('diagramContainer');
+    function zoom(delta) {
+      currentScale = Math.min(2.5, Math.max(0.4, currentScale + delta));
+      container.style.transform = `scale(${currentScale})`;
+    }
+    function resetZoom() {
+      currentScale = 1.0;
+      container.style.transform = 'scale(1)';
+    }
+  </script>
+</body>
+</html>

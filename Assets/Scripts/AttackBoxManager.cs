@@ -5,6 +5,7 @@ using UnityEngine.UI;
 
 public class AttackBoxManager : Singleton<AttackBoxManager>
 {
+    public static event System.Action<Card> OnCardAddedToAttackBoxEvent;
     [Header("Attack Box 기본 설정")]
     [SerializeField] private RectTransform boxRectTransform;        // Attack Box의 RectTransform
     [SerializeField] private int requiredCardCount = 6;             // 최대 수용 장수이자 행동 실행에 반드시 필요한 카드 장수 (6장)
@@ -107,6 +108,7 @@ public class AttackBoxManager : Singleton<AttackBoxManager>
         }
 
         queuedCards.Add(card);
+        OnCardAddedToAttackBoxEvent?.Invoke(card);
         UpdateBoxLayout();
 
         if (IsReadyToExecute)
@@ -139,6 +141,43 @@ public class AttackBoxManager : Singleton<AttackBoxManager>
         {
             HandManager.Ins.ReturnCardToHand(card);
         }
+    }
+
+    /// <summary>
+    /// 보유한 스타들을 1개씩 어떤 카드에 보낼지 순서 배열(각 원소가 target 카드 인덱스)을 미리 계산합니다.
+    /// (카드당 최대 10개=100%까지 우선 분배)
+    /// </summary>
+    public int[] CalculateStarDistributionSequence(int totalStars)
+    {
+        if (queuedCards.Count == 0 || totalStars <= 0) return new int[0];
+
+        int[] sequence = new int[totalStars];
+        int[] starCounts = new int[queuedCards.Count];
+
+        for (int s = 0; s < totalStars; s++)
+        {
+            List<int> availableIndices = new List<int>();
+            for (int i = 0; i < queuedCards.Count; i++)
+            {
+                if (queuedCards[i] != null && starCounts[i] < 10)
+                    availableIndices.Add(i);
+            }
+
+            int pick;
+            if (availableIndices.Count > 0)
+            {
+                pick = availableIndices[Random.Range(0, availableIndices.Count)];
+            }
+            else
+            {
+                pick = Random.Range(0, queuedCards.Count);
+            }
+
+            starCounts[pick]++;
+            sequence[s] = pick;
+        }
+
+        return sequence;
     }
 
     /// <summary>
