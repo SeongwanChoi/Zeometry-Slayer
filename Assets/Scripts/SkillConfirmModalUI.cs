@@ -1,4 +1,5 @@
 using System.Collections;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -15,13 +16,13 @@ public class SkillConfirmModalUI : Singleton<SkillConfirmModalUI>
     [SerializeField] private RectTransform modalRootRect;
     [SerializeField] private RectTransform windowRect;
     [SerializeField] private Image skillIconImage;
-    [SerializeField] private Text titleText;
-    [SerializeField] private Text subTitleText;
-    [SerializeField] private Text skillNameText;
-    [SerializeField] private Text chargeTimeText;
-    [SerializeField] private Text skillDescText;
+    [SerializeField] private TextMeshProUGUI titleText;
+    [SerializeField] private TextMeshProUGUI subTitleText;
+    [SerializeField] private TextMeshProUGUI skillNameText;
+    [SerializeField] private TextMeshProUGUI chargeTimeText;
+    [SerializeField] private TextMeshProUGUI skillDescText;
     [SerializeField] private Button confirmButton;
-    [SerializeField] private Text confirmButtonText;
+    [SerializeField] private TextMeshProUGUI confirmButtonText;
     [SerializeField] private Button cancelButton;
     [SerializeField] private Button closeXButton;
 
@@ -280,7 +281,7 @@ public class SkillConfirmModalUI : Singleton<SkillConfirmModalUI>
             }
             else
             {
-                titleText = tTr.GetComponent<Text>();
+                titleText = UIHelper.GetOrAddTMPText(tTr.gameObject);
             }
         }
 
@@ -305,7 +306,7 @@ public class SkillConfirmModalUI : Singleton<SkillConfirmModalUI>
             }
             else
             {
-                subTitleText = stTr.GetComponent<Text>();
+                subTitleText = UIHelper.GetOrAddTMPText(stTr.gameObject);
             }
         }
 
@@ -428,7 +429,7 @@ public class SkillConfirmModalUI : Singleton<SkillConfirmModalUI>
             }
             else
             {
-                skillNameText = snTr.GetComponent<Text>();
+                skillNameText = UIHelper.GetOrAddTMPText(snTr.gameObject);
             }
         }
 
@@ -453,7 +454,7 @@ public class SkillConfirmModalUI : Singleton<SkillConfirmModalUI>
             }
             else
             {
-                chargeTimeText = ctTr.GetComponent<Text>();
+                chargeTimeText = UIHelper.GetOrAddTMPText(ctTr.gameObject);
             }
         }
 
@@ -475,13 +476,15 @@ public class SkillConfirmModalUI : Singleton<SkillConfirmModalUI>
                     new Color(0.02f, 0.04f, 0.10f, 0.98f),
                     new Vector2(1.6f, -1.6f)
                 );
-                skillDescText.lineSpacing = 1.25f;
-                skillDescText.supportRichText = true;
-                skillDescText.horizontalOverflow = HorizontalWrapMode.Wrap;
+                skillDescText.lineSpacing = 6f;
+                skillDescText.richText = true;
+                skillDescText.textWrappingMode = TextWrappingModes.Normal;
             }
             else
             {
-                skillDescText = sdTr.GetComponent<Text>();
+                skillDescText = UIHelper.GetOrAddTMPText(sdTr.gameObject);
+                skillDescText.richText = true;
+                skillDescText.textWrappingMode = TextWrappingModes.Normal;
             }
         }
 
@@ -517,7 +520,7 @@ public class SkillConfirmModalUI : Singleton<SkillConfirmModalUI>
         Vector2 size,
         UnityEngine.Events.UnityAction onClickAction,
         ref Button btnRef,
-        out Text labelTextRef)
+        out TextMeshProUGUI labelTextRef)
     {
         labelTextRef = null;
         Transform tr = parent.Find(btnName);
@@ -560,19 +563,22 @@ public class SkillConfirmModalUI : Singleton<SkillConfirmModalUI>
             btnRef = btnObj.GetComponent<Button>();
             Transform lblTr = btnObj.transform.Find("Label");
             if (lblTr != null)
-                labelTextRef = lblTr.GetComponent<Text>();
+                labelTextRef = UIHelper.GetOrAddTMPText(lblTr.gameObject);
         }
 
         if (btnRef != null)
         {
             btnRef.onClick.RemoveAllListeners();
             btnRef.onClick.AddListener(onClickAction);
+            UIHelper.EnsureHoverScale(btnRef.gameObject, 1.08f);
         }
     }
 
     // =========================================================================
     // FGO 스타일 모달 텍스처 프로시저럴 생성기
     // =========================================================================
+    public static Sprite GetOrCreateModalWindowSprite() => GetOrCreateWindowBgSprite();
+
     private static Sprite GetOrCreateWindowBgSprite()
     {
         if (cachedWindowBgSprite != null) return cachedWindowBgSprite;
@@ -673,7 +679,7 @@ public class SkillConfirmModalUI : Singleton<SkillConfirmModalUI>
         return cachedCapsuleBtnSprite;
     }
 
-    private static Sprite GetOrCreateDiamondCloseSprite()
+    public static Sprite GetOrCreateDiamondCloseSprite()
     {
         if (cachedDiamondBtnSprite != null) return cachedDiamondBtnSprite;
 
@@ -731,7 +737,7 @@ public class SkillConfirmModalUI : Singleton<SkillConfirmModalUI>
         return cachedDiamondBtnSprite;
     }
 
-    private static Sprite GetOrCreateDividerLineSprite()
+    public static Sprite GetOrCreateDividerLineSprite()
     {
         if (cachedDividerLineSprite != null) return cachedDividerLineSprite;
 

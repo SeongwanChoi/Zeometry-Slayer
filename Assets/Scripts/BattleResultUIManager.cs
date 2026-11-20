@@ -1,9 +1,10 @@
+using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 /// <summary>
-/// 승리 / 패배 결과창 UI 매니저:
+/// 승리 / 패배 결과창 UI 매니저 (TextMeshProUGUI 기반):
 /// - 승리 (모든 Enemy 사망 시): 화면 가운데 승리 UI + [게임 종료] 버튼 표시 -> 클릭 시 프로그램 종료
 /// - 패배 (모든 Player 사망 시): 화면 가운데 패배 UI + [다시하기] 버튼 표시 -> 클릭 시 처음부터 다시 진행
 /// </summary>
@@ -12,10 +13,10 @@ public class BattleResultUIManager : Singleton<BattleResultUIManager>
     [Header("결과창 UI 참조 (미할당 시 Canvas 하위에 자동 생성)")]
     [SerializeField] private GameObject resultOverlayPanel;
     [SerializeField] private RectTransform resultWindowRect;
-    [SerializeField] private Text titleText;
-    [SerializeField] private Text subTitleText;
+    [SerializeField] private TextMeshProUGUI titleText;
+    [SerializeField] private TextMeshProUGUI subTitleText;
     [SerializeField] private Button actionButton;
-    [SerializeField] private Text actionButtonText;
+    [SerializeField] private TextMeshProUGUI actionButtonText;
 
     private bool isResultShowing = false;
     private bool isVictoryMode = false;
@@ -48,19 +49,19 @@ public class BattleResultUIManager : Singleton<BattleResultUIManager>
         {
             titleText.text = isTutorial ? "튜토리얼 완료!" : "승 리";
             titleText.color = new Color(0.45f, 0.96f, 1.0f, 1.0f);
-            titleText.alignment = TextAnchor.MiddleCenter;
+            titleText.alignment = TextAlignmentOptions.Midline;
         }
 
         if (subTitleText != null)
         {
             subTitleText.text = isTutorial ? "기초 전투 규칙을 모두 습득하셨습니다!" : "모든 적을 처치했습니다!";
-            subTitleText.alignment = TextAnchor.MiddleCenter;
+            subTitleText.alignment = TextAlignmentOptions.Midline;
         }
 
         if (actionButtonText != null)
         {
             actionButtonText.text = isTutorial ? "실전 배틀 시작" : "게임 종료";
-            actionButtonText.alignment = TextAnchor.MiddleCenter;
+            actionButtonText.alignment = TextAlignmentOptions.Midline;
         }
 
         if (resultOverlayPanel != null)
@@ -89,19 +90,19 @@ public class BattleResultUIManager : Singleton<BattleResultUIManager>
         {
             titleText.text = "패 배";
             titleText.color = new Color(1.0f, 0.28f, 0.36f, 1.0f);
-            titleText.alignment = TextAnchor.MiddleCenter;
+            titleText.alignment = TextAlignmentOptions.Midline;
         }
 
         if (subTitleText != null)
         {
             subTitleText.text = "모든 플레이어가 쓰러졌습니다";
-            subTitleText.alignment = TextAnchor.MiddleCenter;
+            subTitleText.alignment = TextAlignmentOptions.Midline;
         }
 
         if (actionButtonText != null)
         {
             actionButtonText.text = "다시하기";
-            actionButtonText.alignment = TextAnchor.MiddleCenter;
+            actionButtonText.alignment = TextAlignmentOptions.Midline;
         }
 
         if (resultOverlayPanel != null)
@@ -260,29 +261,31 @@ public class BattleResultUIManager : Singleton<BattleResultUIManager>
             {
                 Transform t = resultWindowRect.Find("ResultTitleText");
                 titleText = t != null
-                    ? t.GetComponent<Text>()
+                    ? UIHelper.GetOrAddTMPText(t.gameObject)
                     : CreateText(resultWindowRect, "ResultTitleText", "승 리", 42, FontStyle.Bold, new Color(0.45f, 0.96f, 1f, 1f), new Vector2(0f, 88f), new Vector2(480f, 64f));
             }
             if (titleText != null)
             {
                 NormalizeCenteredRect(titleText.rectTransform, new Vector2(0f, 88f), new Vector2(480f, 64f));
+                titleText.font = UIHelper.GetOrCreateTMPFont();
                 titleText.fontSize = 42;
-                titleText.fontStyle = FontStyle.Bold;
-                titleText.alignment = TextAnchor.MiddleCenter;
+                titleText.fontStyle = FontStyles.Bold;
+                titleText.alignment = TextAlignmentOptions.Midline;
             }
 
             if (subTitleText == null)
             {
                 Transform st = resultWindowRect.Find("ResultSubTitleText");
                 subTitleText = st != null
-                    ? st.GetComponent<Text>()
+                    ? UIHelper.GetOrAddTMPText(st.gameObject)
                     : CreateText(resultWindowRect, "ResultSubTitleText", "", 21, FontStyle.Normal, new Color(0.84f, 0.90f, 0.98f, 0.95f), new Vector2(0f, 18f), new Vector2(480f, 44f));
             }
             if (subTitleText != null)
             {
                 NormalizeCenteredRect(subTitleText.rectTransform, new Vector2(0f, 18f), new Vector2(480f, 44f));
+                subTitleText.font = UIHelper.GetOrCreateTMPFont();
                 subTitleText.fontSize = 21;
-                subTitleText.alignment = TextAnchor.MiddleCenter;
+                subTitleText.alignment = TextAlignmentOptions.Midline;
             }
 
             if (actionButton == null)
@@ -293,7 +296,7 @@ public class BattleResultUIManager : Singleton<BattleResultUIManager>
                     actionButton = btnTr.GetComponent<Button>();
                     Transform btnTxtTr = btnTr.Find("ActionButtonText");
                     if (btnTxtTr != null)
-                        actionButtonText = btnTxtTr.GetComponent<Text>();
+                        actionButtonText = UIHelper.GetOrAddTMPText(btnTxtTr.gameObject);
                 }
                 else
                 {
@@ -327,6 +330,12 @@ public class BattleResultUIManager : Singleton<BattleResultUIManager>
                     );
                 }
             }
+            else if (actionButtonText == null)
+            {
+                Transform btnTxtTr = actionButton.transform.Find("ActionButtonText");
+                if (btnTxtTr != null)
+                    actionButtonText = UIHelper.GetOrAddTMPText(btnTxtTr.gameObject);
+            }
 
             if (actionButton != null)
             {
@@ -335,14 +344,16 @@ public class BattleResultUIManager : Singleton<BattleResultUIManager>
 
                 actionButton.onClick.RemoveListener(OnActionButtonClicked);
                 actionButton.onClick.AddListener(OnActionButtonClicked);
+                UIHelper.EnsureHoverScale(actionButton.gameObject, 1.10f);
             }
 
             if (actionButtonText != null)
             {
                 NormalizeCenteredRect(actionButtonText.rectTransform, Vector2.zero, new Vector2(300f, 64f));
+                actionButtonText.font = UIHelper.GetOrCreateTMPFont();
                 actionButtonText.fontSize = 26;
-                actionButtonText.fontStyle = FontStyle.Bold;
-                actionButtonText.alignment = TextAnchor.MiddleCenter;
+                actionButtonText.fontStyle = FontStyles.Bold;
+                actionButtonText.alignment = TextAlignmentOptions.Midline;
             }
         }
     }
@@ -352,7 +363,7 @@ public class BattleResultUIManager : Singleton<BattleResultUIManager>
         UIHelper.ConfigureCenteredRect(rt, anchoredPos, sizeDelta);
     }
 
-    private static Text CreateText(
+    private static TextMeshProUGUI CreateText(
         Transform parent,
         string name,
         string content,

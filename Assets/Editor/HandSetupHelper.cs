@@ -3,6 +3,7 @@ using System.IO;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 [InitializeOnLoad]
@@ -439,6 +440,29 @@ public static class HandSetupHelper
             skillModal.HideImmediate();
         }
 
+        DeckViewerModalUI deckViewerModal = Object.FindFirstObjectByType<DeckViewerModalUI>();
+        if (deckViewerModal == null && battleManager != null)
+        {
+            deckViewerModal = battleManager.gameObject.GetComponent<DeckViewerModalUI>();
+            if (deckViewerModal == null)
+            {
+                deckViewerModal = battleManager.gameObject.AddComponent<DeckViewerModalUI>();
+                sceneModified = true;
+            }
+        }
+        if (deckViewerModal != null)
+        {
+            deckViewerModal.EnsureModalUI();
+            deckViewerModal.HideImmediate();
+        }
+
+        Camera mainCam = Camera.main != null ? Camera.main : Object.FindFirstObjectByType<Camera>();
+        if (mainCam != null && mainCam.GetComponent<Physics2DRaycaster>() == null)
+        {
+            mainCam.gameObject.AddComponent<Physics2DRaycaster>();
+            sceneModified = true;
+        }
+
         SplineTargetingArrow splineArrow = Object.FindFirstObjectByType<SplineTargetingArrow>();
         if (splineArrow == null && battleManager != null)
         {
@@ -459,6 +483,27 @@ public static class HandSetupHelper
             SetObjRef(tutSo, "skillDefenseUpSprite", skillDefenseUpSprite, ref sceneModified);
             SetObjRef(tutSo, "skillCritDamageUpSprite", skillCritDamageUpSprite, ref sceneModified);
             tutSo.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        // 19. 씬 내부에 남아있는 레거시 UI.Text 오브젝트가 있으면 전부 TextMeshProUGUI로 일괄 자동 변환
+        Text[] remainingLegacyTexts = Object.FindObjectsByType<Text>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        if (remainingLegacyTexts != null && remainingLegacyTexts.Length > 0)
+        {
+            for (int i = 0; i < remainingLegacyTexts.Length; i++)
+            {
+                if (remainingLegacyTexts[i] != null)
+                {
+                    UIHelper.GetOrAddTMPText(remainingLegacyTexts[i].gameObject);
+                    sceneModified = true;
+                }
+            }
+
+            if (existingHand != null) existingHand.EnsureDeckAndDiscardUI();
+            if (pauseManager != null) pauseManager.EnsurePauseMenuUI();
+            if (resultManager != null) { resultManager.EnsureResultUI(); resultManager.HideResultUI(); }
+            if (resourceManager != null) { resourceManager.EnsureResourceUI(); resourceManager.RefreshAllUI(); }
+            if (skillModal != null) { skillModal.EnsureModalUI(); skillModal.HideImmediate(); }
+            if (deckViewerModal != null) { deckViewerModal.EnsureModalUI(); deckViewerModal.HideImmediate(); }
         }
 
         if (sceneModified)

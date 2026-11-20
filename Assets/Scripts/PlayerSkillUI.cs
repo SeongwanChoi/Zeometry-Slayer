@@ -1,4 +1,5 @@
 using System.Collections;
+using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -27,9 +28,9 @@ public class PlayerSkillUI : MonoBehaviour
     [SerializeField] private Image attackUpImage;
     [SerializeField] private Image defenseUpImage;
     [SerializeField] private Image critDamageUpImage;
-    [SerializeField] private Text attackCooldownText;
-    [SerializeField] private Text defenseCooldownText;
-    [SerializeField] private Text critCooldownText;
+    [SerializeField] private TextMeshProUGUI attackCooldownText;
+    [SerializeField] private TextMeshProUGUI defenseCooldownText;
+    [SerializeField] private TextMeshProUGUI critCooldownText;
 
     [Header("스킬 아이콘 스프라이트 참조")]
     [SerializeField] private Sprite attackUpSprite;
@@ -141,7 +142,7 @@ public class PlayerSkillUI : MonoBehaviour
         ApplyButtonVisualState(critDamageUpButton, critDamageUpImage, critCooldownText, cd3);
     }
 
-    private void ApplyButtonVisualState(Button btn, Image img, Text cdText, int cooldownRemaining)
+    private void ApplyButtonVisualState(Button btn, Image img, TextMeshProUGUI cdText, int cooldownRemaining)
     {
         bool isOnCooldown = cooldownRemaining > 0;
 
@@ -197,11 +198,12 @@ public class PlayerSkillUI : MonoBehaviour
         if (targetUnit == null || targetUnit.IsDead) return;
         if (BattleManager.Ins != null && !BattleManager.Ins.IsPlayerInputAllowed) return;
         if (SkillConfirmModalUI.Ins != null && SkillConfirmModalUI.Ins.IsModalOpen) return;
+        if (DeckViewerModalUI.Ins != null && DeckViewerModalUI.Ins.IsModalOpen) return;
 
         if (!targetUnit.IsSkillOnCooldown(skillType))
         {
             if (btnRect != null)
-                btnRect.localScale = Vector3.one * 0.84f;
+                btnRect.localScale = Vector3.one * 0.86f;
         }
     }
 
@@ -213,12 +215,13 @@ public class PlayerSkillUI : MonoBehaviour
     public void HandleSkillPointerUp(ESkillType skillType, RectTransform btnRect, bool isPointerInside)
     {
         if (btnRect != null)
-            btnRect.localScale = Vector3.one;
+            btnRect.localScale = isPointerInside ? Vector3.one * SkillIconPointerReceiver.HoverScale : Vector3.one;
 
         if (!isPointerInside) return;
         if (targetUnit == null || targetUnit.IsDead) return;
         if (BattleManager.Ins != null && !BattleManager.Ins.IsPlayerInputAllowed) return;
         if (SkillConfirmModalUI.Ins != null && SkillConfirmModalUI.Ins.IsModalOpen) return;
+        if (DeckViewerModalUI.Ins != null && DeckViewerModalUI.Ins.IsModalOpen) return;
 
         if (targetUnit.IsSkillOnCooldown(skillType))
         {
@@ -395,7 +398,7 @@ public class PlayerSkillUI : MonoBehaviour
         Sprite iconSprite,
         ref Button btnRef,
         ref Image imgRef,
-        ref Text cdTextRef)
+        ref TextMeshProUGUI cdTextRef)
     {
         Transform btnTr = rootRect.Find(buttonName);
         GameObject btnObj;
@@ -458,7 +461,7 @@ public class PlayerSkillUI : MonoBehaviour
         }
         else
         {
-            cdTextRef = cdTr.GetComponent<Text>();
+            cdTextRef = UIHelper.GetOrAddTMPText(cdTr.gameObject);
         }
     }
 
@@ -497,10 +500,12 @@ public class PlayerSkillUI : MonoBehaviour
 }
 
 /// <summary>
-/// 개별 스킬 아이콘 버튼의 PointerDown(축소) / PointerUp(원래 크기 복귀 후 스킬 확인창 표시 또는 쿨타임 진동) 이벤트를 전달합니다.
+/// 개별 스킬 아이콘 버튼의 PointerEnter(호버 확대) / PointerExit(원래 크기 복귀) / PointerDown(축소) / PointerUp(스킬 확인창 표시 또는 쿨타임 진동) 이벤트를 전달합니다.
 /// </summary>
 public class SkillIconPointerReceiver : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IPointerExitHandler, IPointerEnterHandler
 {
+    public const float HoverScale = 1.18f;
+
     private PlayerSkillUI ownerUI;
     private ESkillType skillType;
     private RectTransform targetRect;
@@ -517,12 +522,26 @@ public class SkillIconPointerReceiver : MonoBehaviour, IPointerDownHandler, IPoi
     public void OnPointerEnter(PointerEventData eventData)
     {
         isPointerInside = true;
+        if (!isPressed && targetRect != null)
+        {
+            targetRect.localScale = Vector3.one * HoverScale;
+        }
     }
 
     public void OnPointerExit(PointerEventData eventData)
     {
         isPointerInside = false;
-        if (isPressed && targetRect != null)
+        if (targetRect != null)
+        {
+            targetRect.localScale = Vector3.one;
+        }
+    }
+
+    private void OnDisable()
+    {
+        isPointerInside = false;
+        isPressed = false;
+        if (targetRect != null)
         {
             targetRect.localScale = Vector3.one;
         }

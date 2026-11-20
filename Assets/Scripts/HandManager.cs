@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
@@ -46,9 +47,9 @@ public class HandManager : Singleton<HandManager>
 
     [Header("덱(Draw Pile) / 버린 카드(Discard Pile) / 턴 종료 버튼 UI 참조")]
     [SerializeField] private RectTransform drawPileRoot;
-    [SerializeField] private Text drawPileCountText;
+    [SerializeField] private TextMeshProUGUI drawPileCountText;
     [SerializeField] private RectTransform discardPileRoot;
-    [SerializeField] private Text discardPileCountText;
+    [SerializeField] private TextMeshProUGUI discardPileCountText;
     [SerializeField] private RectTransform turnEndButtonRoot;
     [SerializeField] private Button turnEndButton;
 
@@ -81,6 +82,8 @@ public class HandManager : Singleton<HandManager>
     public int CurrentSelectedPlayerIndex => currentSelectedPlayerIndex;
     public bool IsZeroCostQuickBusterActive => isZeroCostQuickBusterActive;
     public IReadOnlyList<Card> HandCards => handCards;
+    public IReadOnlyList<DeckCardEntry> DrawPileEntries => drawPile;
+    public IReadOnlyList<DeckCardEntry> DiscardPileEntries => discardPile;
     public RectTransform DrawPileRect => drawPileRoot;
     public RectTransform DiscardPileRect => discardPileRoot;
     public RectTransform TurnEndButtonRect => turnEndButtonRoot;
@@ -125,6 +128,7 @@ public class HandManager : Singleton<HandManager>
         _ = BattleManager.Ins;
         _ = PauseMenuManager.Ins;
         _ = SkillConfirmModalUI.Ins;
+        _ = DeckViewerModalUI.Ins;
         _ = SplineTargetingArrow.Ins;
     }
 
@@ -1031,23 +1035,40 @@ public class HandManager : Singleton<HandManager>
             }
             else
             {
-                GameObject dpObj = new GameObject("DrawPileUI", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+                GameObject dpObj = new GameObject("DrawPileUI", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
                 dpObj.layer = LayerMask.NameToLayer("UI");
                 dpObj.transform.SetParent(canvasTr, false);
 
                 drawPileRoot = dpObj.GetComponent<RectTransform>();
                 drawPileRoot.anchorMin = new Vector2(0f, 0f);
                 drawPileRoot.anchorMax = new Vector2(0f, 0f);
-                drawPileRoot.pivot = new Vector2(0f, 0f);
-                drawPileRoot.anchoredPosition = new Vector2(24f, 20f);
+                drawPileRoot.pivot = new Vector2(0.5f, 0.5f);
+                drawPileRoot.anchoredPosition = new Vector2(67f, 68f);
                 drawPileRoot.sizeDelta = new Vector2(86f, 96f);
                 drawPileRoot.localScale = Vector3.one;
 
                 Image dpImg = dpObj.GetComponent<Image>();
                 dpImg.sprite = GetOrCreateDeckPileSprite(false);
                 dpImg.preserveAspect = true;
-                dpImg.raycastTarget = false;
+                dpImg.raycastTarget = true;
             }
+        }
+
+        if (drawPileRoot != null)
+        {
+            Image dpImg = drawPileRoot.GetComponent<Image>();
+            if (dpImg != null)
+                dpImg.raycastTarget = true;
+
+            Button dpBtn = drawPileRoot.GetComponent<Button>();
+            if (dpBtn == null)
+                dpBtn = drawPileRoot.gameObject.AddComponent<Button>();
+            dpBtn.targetGraphic = dpImg;
+            dpBtn.transition = Selectable.Transition.None;
+            dpBtn.onClick.RemoveAllListeners();
+            dpBtn.onClick.AddListener(OnDrawPileClicked);
+
+            UIHelper.EnsureHoverScale(drawPileRoot.gameObject, 1.15f);
         }
 
         if (drawPileCountText == null && drawPileRoot != null)
@@ -1065,23 +1086,40 @@ public class HandManager : Singleton<HandManager>
             }
             else
             {
-                GameObject dcpObj = new GameObject("DiscardPileUI", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+                GameObject dcpObj = new GameObject("DiscardPileUI", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
                 dcpObj.layer = LayerMask.NameToLayer("UI");
                 dcpObj.transform.SetParent(canvasTr, false);
 
                 discardPileRoot = dcpObj.GetComponent<RectTransform>();
                 discardPileRoot.anchorMin = new Vector2(1f, 0f);
                 discardPileRoot.anchorMax = new Vector2(1f, 0f);
-                discardPileRoot.pivot = new Vector2(1f, 0f);
-                discardPileRoot.anchoredPosition = new Vector2(-24f, 20f);
+                discardPileRoot.pivot = new Vector2(0.5f, 0.5f);
+                discardPileRoot.anchoredPosition = new Vector2(-67f, 68f);
                 discardPileRoot.sizeDelta = new Vector2(86f, 96f);
                 discardPileRoot.localScale = Vector3.one;
 
                 Image dcpImg = dcpObj.GetComponent<Image>();
                 dcpImg.sprite = GetOrCreateDeckPileSprite(true);
                 dcpImg.preserveAspect = true;
-                dcpImg.raycastTarget = false;
+                dcpImg.raycastTarget = true;
             }
+        }
+
+        if (discardPileRoot != null)
+        {
+            Image dcpImg = discardPileRoot.GetComponent<Image>();
+            if (dcpImg != null)
+                dcpImg.raycastTarget = true;
+
+            Button dcpBtn = discardPileRoot.GetComponent<Button>();
+            if (dcpBtn == null)
+                dcpBtn = discardPileRoot.gameObject.AddComponent<Button>();
+            dcpBtn.targetGraphic = dcpImg;
+            dcpBtn.transition = Selectable.Transition.None;
+            dcpBtn.onClick.RemoveAllListeners();
+            dcpBtn.onClick.AddListener(OnDiscardPileClicked);
+
+            UIHelper.EnsureHoverScale(discardPileRoot.gameObject, 1.15f);
         }
 
         if (discardPileCountText == null && discardPileRoot != null)
@@ -1107,8 +1145,8 @@ public class HandManager : Singleton<HandManager>
                 turnEndButtonRoot = btnObj.GetComponent<RectTransform>();
                 turnEndButtonRoot.anchorMin = new Vector2(1f, 0f);
                 turnEndButtonRoot.anchorMax = new Vector2(1f, 0f);
-                turnEndButtonRoot.pivot = new Vector2(1f, 0f);
-                turnEndButtonRoot.anchoredPosition = new Vector2(-126f, 132f);
+                turnEndButtonRoot.pivot = new Vector2(0.5f, 0.5f);
+                turnEndButtonRoot.anchoredPosition = new Vector2(-213f, 164f);
                 turnEndButtonRoot.sizeDelta = new Vector2(174f, 64f);
                 turnEndButtonRoot.localScale = Vector3.one;
 
@@ -1139,11 +1177,37 @@ public class HandManager : Singleton<HandManager>
 
         if (turnEndButton != null)
         {
+            UIHelper.FindOrConvertTMPText(turnEndButton.transform, "TurnEndLabel");
             turnEndButton.onClick.RemoveAllListeners();
             turnEndButton.onClick.AddListener(OnTurnEndButtonClicked);
+            UIHelper.EnsureHoverScale(turnEndButton.gameObject, 1.12f);
         }
 
         RefreshPileCountUI();
+    }
+
+    private void OnDrawPileClicked()
+    {
+        if (PauseMenuManager.Ins != null && PauseMenuManager.Ins.IsPaused) return;
+        if (SkillConfirmModalUI.Ins != null && SkillConfirmModalUI.Ins.IsModalOpen) return;
+
+        if (SoundManager.Ins != null)
+            SoundManager.Ins.PlayUIClick();
+
+        if (DeckViewerModalUI.Ins != null)
+            DeckViewerModalUI.Ins.OpenPileViewerModal(isDiscardPile: false);
+    }
+
+    private void OnDiscardPileClicked()
+    {
+        if (PauseMenuManager.Ins != null && PauseMenuManager.Ins.IsPaused) return;
+        if (SkillConfirmModalUI.Ins != null && SkillConfirmModalUI.Ins.IsModalOpen) return;
+
+        if (SoundManager.Ins != null)
+            SoundManager.Ins.PlayUIClick();
+
+        if (DeckViewerModalUI.Ins != null)
+            DeckViewerModalUI.Ins.OpenPileViewerModal(isDiscardPile: true);
     }
 
     private void OnTurnEndButtonClicked()
@@ -1157,13 +1221,13 @@ public class HandManager : Singleton<HandManager>
         BattleManager.Ins.TurnEnd();
     }
 
-    private Text EnsurePileBadgeText(RectTransform pileRoot, string badgeName, Vector2 anchoredPos, Color badgeColor, bool rightAnchored = false)
+    private TextMeshProUGUI EnsurePileBadgeText(RectTransform pileRoot, string badgeName, Vector2 anchoredPos, Color badgeColor, bool rightAnchored = false)
     {
         Transform existing = pileRoot.Find(badgeName);
         if (existing != null)
         {
             Transform txtTr = existing.Find("CountText");
-            if (txtTr != null) return txtTr.GetComponent<Text>();
+            if (txtTr != null) return UIHelper.GetOrAddTMPText(txtTr.gameObject);
         }
 
         GameObject badgeObj = new GameObject(badgeName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));

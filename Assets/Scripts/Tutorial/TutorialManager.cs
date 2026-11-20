@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -43,10 +44,10 @@ public class TutorialManager : MonoBehaviour
 
     private RectTransform rightGuidePanel;
     private CanvasGroup rightGuideCg;
-    private Text stepBadgeText;
-    private Text titleText;
-    private Text bodyText;
-    private Text hintText;
+    private TextMeshProUGUI stepBadgeText;
+    private TextMeshProUGUI titleText;
+    private TextMeshProUGUI bodyText;
+    private TextMeshProUGUI hintText;
     private Button nextStepBtn;
     private RectTransform imageContainer;
     private readonly List<Image> displayedImages = new List<Image>();
@@ -632,6 +633,8 @@ public class TutorialManager : MonoBehaviour
 
         Font font = GetBestFont();
 
+        TMP_FontAsset tmpFont = UIHelper.GetOrCreateTMPFont();
+
         GameObject badgeObj = new GameObject("StepBadge", typeof(RectTransform), typeof(Image));
         badgeObj.transform.SetParent(rightGuidePanel, false);
         RectTransform badgeRect = badgeObj.GetComponent<RectTransform>();
@@ -646,22 +649,22 @@ public class TutorialManager : MonoBehaviour
         badgeImg.color = new Color(0.18f, 0.28f, 0.52f, 1f);
         badgeImg.raycastTarget = false;
 
-        GameObject badgeTextObj = new GameObject("StepBadgeText", typeof(RectTransform), typeof(Text));
+        GameObject badgeTextObj = new GameObject("StepBadgeText", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
         badgeTextObj.transform.SetParent(badgeObj.transform, false);
         RectTransform badgeTextRect = badgeTextObj.GetComponent<RectTransform>();
         badgeTextRect.anchorMin = Vector2.zero;
         badgeTextRect.anchorMax = Vector2.one;
         badgeTextRect.sizeDelta = Vector2.zero;
 
-        stepBadgeText = badgeTextObj.GetComponent<Text>();
-        stepBadgeText.font = font;
+        stepBadgeText = badgeTextObj.GetComponent<TextMeshProUGUI>();
+        stepBadgeText.font = tmpFont;
         stepBadgeText.fontSize = 17;
-        stepBadgeText.fontStyle = FontStyle.Bold;
+        stepBadgeText.fontStyle = FontStyles.Bold;
         stepBadgeText.color = new Color(0.85f, 0.92f, 1f, 1f);
-        stepBadgeText.alignment = TextAnchor.MiddleCenter;
+        stepBadgeText.alignment = TextAlignmentOptions.Midline;
         stepBadgeText.text = $"TUTORIAL STEP 1/{TotalTutorialSteps}";
 
-        GameObject titleObj = new GameObject("TitleText", typeof(RectTransform), typeof(Text));
+        GameObject titleObj = new GameObject("TitleText", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
         titleObj.transform.SetParent(rightGuidePanel, false);
         RectTransform titleRect = titleObj.GetComponent<RectTransform>();
         titleRect.anchorMin = new Vector2(0.5f, 1f);
@@ -670,12 +673,12 @@ public class TutorialManager : MonoBehaviour
         titleRect.anchoredPosition = new Vector2(0f, -74f);
         titleRect.sizeDelta = new Vector2(430f, 60f);
 
-        titleText = titleObj.GetComponent<Text>();
-        titleText.font = font;
+        titleText = titleObj.GetComponent<TextMeshProUGUI>();
+        titleText.font = tmpFont;
         titleText.fontSize = 24;
-        titleText.fontStyle = FontStyle.Bold;
+        titleText.fontStyle = FontStyles.Bold;
         titleText.color = Color.white;
-        titleText.alignment = TextAnchor.MiddleCenter;
+        titleText.alignment = TextAlignmentOptions.Midline;
 
         GameObject dividerObj = new GameObject("Divider", typeof(RectTransform), typeof(Image));
         dividerObj.transform.SetParent(rightGuidePanel, false);
@@ -704,7 +707,7 @@ public class TutorialManager : MonoBehaviour
         hlg.childForceExpandWidth = false;
         hlg.childForceExpandHeight = false;
 
-        GameObject bodyObj = new GameObject("BodyText", typeof(RectTransform), typeof(Text));
+        GameObject bodyObj = new GameObject("BodyText", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
         bodyObj.transform.SetParent(rightGuidePanel, false);
         RectTransform bodyRect = bodyObj.GetComponent<RectTransform>();
         bodyRect.anchorMin = new Vector2(0.5f, 1f);
@@ -713,15 +716,16 @@ public class TutorialManager : MonoBehaviour
         bodyRect.anchoredPosition = new Vector2(0f, -320f);
         bodyRect.sizeDelta = new Vector2(430f, 290f);
 
-        bodyText = bodyObj.GetComponent<Text>();
-        bodyText.font = font;
+        bodyText = bodyObj.GetComponent<TextMeshProUGUI>();
+        bodyText.font = tmpFont;
         bodyText.fontSize = 17;
-        bodyText.lineSpacing = 1.32f;
-        bodyText.supportRichText = true;
+        bodyText.lineSpacing = 8f;
+        bodyText.richText = true;
+        bodyText.textWrappingMode = TextWrappingModes.Normal;
         bodyText.color = new Color(0.88f, 0.92f, 1f, 1f);
-        bodyText.alignment = TextAnchor.UpperLeft;
+        bodyText.alignment = TextAlignmentOptions.TopLeft;
 
-        GameObject hintObj = new GameObject("HintText", typeof(RectTransform), typeof(Text));
+        GameObject hintObj = new GameObject("HintText", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
         hintObj.transform.SetParent(rightGuidePanel, false);
         RectTransform hintRect = hintObj.GetComponent<RectTransform>();
         hintRect.anchorMin = new Vector2(0.5f, 0f);
@@ -730,12 +734,12 @@ public class TutorialManager : MonoBehaviour
         hintRect.anchoredPosition = new Vector2(0f, 75f);
         hintRect.sizeDelta = new Vector2(430f, 32f);
 
-        hintText = hintObj.GetComponent<Text>();
-        hintText.font = font;
+        hintText = hintObj.GetComponent<TextMeshProUGUI>();
+        hintText.font = tmpFont;
         hintText.fontSize = 15;
-        hintText.fontStyle = FontStyle.Italic;
+        hintText.fontStyle = FontStyles.Italic;
         hintText.color = new Color(0.45f, 0.85f, 1f, 1f);
-        hintText.alignment = TextAnchor.MiddleCenter;
+        hintText.alignment = TextAlignmentOptions.Midline;
 
         GameObject btnObj = new GameObject("NextStepButton", typeof(RectTransform), typeof(Image), typeof(Button));
         btnObj.transform.SetParent(rightGuidePanel, false);
@@ -753,20 +757,21 @@ public class TutorialManager : MonoBehaviour
 
         nextStepBtn = btnObj.GetComponent<Button>();
         nextStepBtn.onClick.AddListener(OnNextButtonClicked);
+        UIHelper.EnsureHoverScale(btnObj, 1.05f);
 
-        GameObject btnTextObj = new GameObject("Text", typeof(RectTransform), typeof(Text));
+        GameObject btnTextObj = new GameObject("Text", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
         btnTextObj.transform.SetParent(btnObj.transform, false);
         RectTransform btnTextRect = btnTextObj.GetComponent<RectTransform>();
         btnTextRect.anchorMin = Vector2.zero;
         btnTextRect.anchorMax = Vector2.one;
         btnTextRect.sizeDelta = Vector2.zero;
 
-        Text btnText = btnTextObj.GetComponent<Text>();
-        btnText.font = font;
+        TextMeshProUGUI btnText = btnTextObj.GetComponent<TextMeshProUGUI>();
+        btnText.font = tmpFont;
         btnText.fontSize = 17;
-        btnText.fontStyle = FontStyle.Bold;
+        btnText.fontStyle = FontStyles.Bold;
         btnText.color = Color.white;
-        btnText.alignment = TextAnchor.MiddleCenter;
+        btnText.alignment = TextAlignmentOptions.Midline;
         btnText.text = "다 음  >";
     }
 

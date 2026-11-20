@@ -1,4 +1,5 @@
 using System.Collections;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -19,14 +20,14 @@ public class BattleResourceUIManager : Singleton<BattleResourceUIManager>
     [SerializeField] private int currentCost = 3;
     [SerializeField] private int nextTurnBonusCost = 0;
     [SerializeField] private RectTransform costTrayRoot;
-    [SerializeField] private Text costValueText;
-    [SerializeField] private Text nextTurnCostBadgeText;
+    [SerializeField] private TextMeshProUGUI costValueText;
+    [SerializeField] private TextMeshProUGUI nextTurnCostBadgeText;
 
     [Header("2. 크리티컬 스타(Star) 설정 및 UI 참조")]
     [SerializeField] private int currentStars = 0;
     [SerializeField] private RectTransform starCounterRoot;
     [SerializeField] private Image starIconImage;
-    [SerializeField] private Text starCountText;
+    [SerializeField] private TextMeshProUGUI starCountText;
     [SerializeField] private Sprite criticalStarSprite;
 
     private static Sprite cachedCostTrayBgSprite;
@@ -357,7 +358,7 @@ public class BattleResourceUIManager : Singleton<BattleResourceUIManager>
             Transform txtTr = badgeRect.Find("CostValueText");
             if (txtTr == null)
             {
-                GameObject txtObj = new GameObject("CostValueText", typeof(RectTransform), typeof(CanvasRenderer), typeof(Text), typeof(Outline));
+                GameObject txtObj = new GameObject("CostValueText", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
                 txtObj.layer = LayerMask.NameToLayer("UI");
                 txtObj.transform.SetParent(badgeRect, false);
 
@@ -368,23 +369,19 @@ public class BattleResourceUIManager : Singleton<BattleResourceUIManager>
                 txtRt.offsetMax = Vector2.zero;
                 txtRt.localScale = Vector3.one;
 
-                costValueText = txtObj.GetComponent<Text>();
-                costValueText.font = GetOrCreateFont();
+                costValueText = txtObj.GetComponent<TextMeshProUGUI>();
+                costValueText.font = UIHelper.GetOrCreateTMPFont();
                 costValueText.fontSize = 22;
-                costValueText.fontStyle = FontStyle.Bold;
-                costValueText.alignment = TextAnchor.MiddleCenter;
+                costValueText.fontStyle = FontStyles.Bold;
+                costValueText.alignment = TextAlignmentOptions.Midline;
                 costValueText.color = Color.white;
-                costValueText.horizontalOverflow = HorizontalWrapMode.Overflow;
-                costValueText.verticalOverflow = VerticalWrapMode.Overflow;
+                costValueText.textWrappingMode = TextWrappingModes.NoWrap;
+                costValueText.overflowMode = TextOverflowModes.Overflow;
                 costValueText.raycastTarget = false;
-
-                Outline outline = txtObj.GetComponent<Outline>();
-                outline.effectColor = new Color(0.02f, 0.05f, 0.20f, 0.98f);
-                outline.effectDistance = new Vector2(1.5f, -1.5f);
             }
             else
             {
-                costValueText = txtTr.GetComponent<Text>();
+                costValueText = UIHelper.GetOrAddTMPText(txtTr.gameObject);
             }
         }
 
@@ -410,7 +407,7 @@ public class BattleResourceUIManager : Singleton<BattleResourceUIManager>
             }
             else
             {
-                nextTurnCostBadgeText = ntTr.GetComponent<Text>();
+                nextTurnCostBadgeText = UIHelper.GetOrAddTMPText(ntTr.gameObject);
             }
         }
     }
@@ -494,6 +491,10 @@ public class BattleResourceUIManager : Singleton<BattleResourceUIManager>
                 new Color(0f, 0f, 0f, 0.95f)
             );
         }
+        else
+        {
+            UIHelper.GetOrAddTMPText(xLabelTr.gameObject);
+        }
 
         if (starCountText == null)
         {
@@ -515,7 +516,7 @@ public class BattleResourceUIManager : Singleton<BattleResourceUIManager>
             }
             else
             {
-                starCountText = countTr.GetComponent<Text>();
+                starCountText = UIHelper.GetOrAddTMPText(countTr.gameObject);
             }
         }
 
@@ -535,9 +536,13 @@ public class BattleResourceUIManager : Singleton<BattleResourceUIManager>
                 new Color(0.18f, 0.08f, 0.01f, 0.98f)
             );
         }
+        else
+        {
+            UIHelper.GetOrAddTMPText(critLabelTr.gameObject);
+        }
     }
 
-    private static Text CreateStyledText(
+    private static TextMeshProUGUI CreateStyledText(
         Transform parent,
         string name,
         string content,
@@ -566,8 +571,6 @@ public class BattleResourceUIManager : Singleton<BattleResourceUIManager>
             new Vector2(0.5f, 0.5f)
         );
     }
-
-    private static Font GetOrCreateFont() => UIHelper.GetOrCreateFont();
 
     public static Sprite GetOrCreateCostTrayBgSprite()
     {

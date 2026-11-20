@@ -1,3 +1,4 @@
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -17,21 +18,21 @@ public class UnitStatusUI : MonoBehaviour
     [SerializeField] private CanvasGroup canvasGroup;
     [SerializeField] private RectTransform hpFillRect;
     [SerializeField] private Image hpFillImage;
-    [SerializeField] private Text hpValueText;
+    [SerializeField] private TextMeshProUGUI hpValueText;
 
     [Header("버프(단일 아이콘 + 우측 하단 중첩 숫자) UI 참조")]
     [SerializeField] private RectTransform buffContainerRect;
     [SerializeField] private Image singleFeatherImage;
-    [SerializeField] private Text buffExponentText;
+    [SerializeField] private TextMeshProUGUI buffExponentText;
     [SerializeField] private Sprite featherBuffSprite;
 
     [Header("플레이어 스킬 버프 아이콘 UI 참조")]
     [SerializeField] private Image attackBuffIconImage;
-    [SerializeField] private Text attackBuffCountText;
+    [SerializeField] private TextMeshProUGUI attackBuffCountText;
     [SerializeField] private Image defenseBuffIconImage;
-    [SerializeField] private Text defenseBuffCountText;
+    [SerializeField] private TextMeshProUGUI defenseBuffCountText;
     [SerializeField] private Image critBuffIconImage;
-    [SerializeField] private Text critBuffCountText;
+    [SerializeField] private TextMeshProUGUI critBuffCountText;
     [SerializeField] private Sprite attackBuffSprite;
     [SerializeField] private Sprite defenseBuffSprite;
     [SerializeField] private Sprite critBuffSprite;
@@ -238,7 +239,7 @@ public class UnitStatusUI : MonoBehaviour
 
     private void UpdateSingleBuffSlot(
         Image iconImg,
-        Text countTxt,
+        TextMeshProUGUI countTxt,
         Sprite sprite,
         int stackCount,
         ref int slotIndex,
@@ -392,14 +393,14 @@ public class UnitStatusUI : MonoBehaviour
             Transform txtTr = bgRect.Find("HPValueText");
             if (txtTr == null)
             {
-                GameObject txtObj = new GameObject("HPValueText", typeof(RectTransform), typeof(CanvasRenderer), typeof(Text), typeof(Outline));
+                GameObject txtObj = new GameObject("HPValueText", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
                 txtObj.layer = LayerMask.NameToLayer("UI");
                 txtObj.transform.SetParent(bgRect, false);
-                hpValueText = txtObj.GetComponent<Text>();
+                hpValueText = txtObj.GetComponent<TextMeshProUGUI>();
             }
             else
             {
-                hpValueText = txtTr.GetComponent<Text>();
+                hpValueText = UIHelper.GetOrAddTMPText(txtTr.gameObject);
             }
         }
 
@@ -418,18 +419,12 @@ public class UnitStatusUI : MonoBehaviour
 
             hpValueText.font = GetOrCreateFont();
             hpValueText.fontSize = 15;
-            hpValueText.fontStyle = FontStyle.Bold;
-            hpValueText.alignment = TextAnchor.MiddleCenter;
+            hpValueText.fontStyle = FontStyles.Bold;
+            hpValueText.alignment = TextAlignmentOptions.Midline;
             hpValueText.color = Color.white;
-            hpValueText.horizontalOverflow = HorizontalWrapMode.Overflow;
-            hpValueText.verticalOverflow = VerticalWrapMode.Overflow;
+            hpValueText.textWrappingMode = TextWrappingModes.NoWrap;
+            hpValueText.overflowMode = TextOverflowModes.Overflow;
             hpValueText.raycastTarget = false;
-
-            Outline txtOutline = hpValueText.GetComponent<Outline>();
-            if (txtOutline == null)
-                txtOutline = hpValueText.gameObject.AddComponent<Outline>();
-            txtOutline.effectColor = new Color(0.28f, 0.02f, 0.04f, 0.98f);
-            txtOutline.effectDistance = new Vector2(1.5f, -1.5f);
         }
 
         // 4. 체력바 아래 버프 컨테이너: 적 FeatherBuffSingle 및 플레이어 스킬 버프 3종 (중첩 숫자는 모두 우측 하단 통일)
@@ -533,7 +528,7 @@ public class UnitStatusUI : MonoBehaviour
         Sprite defaultSprite,
         float defaultPosX,
         ref Image iconImgRef,
-        ref Text countTxtRef)
+        ref TextMeshProUGUI countTxtRef)
     {
         if (iconImgRef == null)
         {
@@ -570,14 +565,14 @@ public class UnitStatusUI : MonoBehaviour
                 Transform expTr = iconImgRef.transform.Find(textObjectName);
                 if (expTr == null)
                 {
-                    GameObject expObj = new GameObject(textObjectName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Text), typeof(Outline));
+                    GameObject expObj = new GameObject(textObjectName, typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
                     expObj.layer = LayerMask.NameToLayer("UI");
                     expObj.transform.SetParent(iconImgRef.transform, false);
-                    countTxtRef = expObj.GetComponent<Text>();
+                    countTxtRef = expObj.GetComponent<TextMeshProUGUI>();
                 }
                 else
                 {
-                    countTxtRef = expTr.GetComponent<Text>();
+                    countTxtRef = UIHelper.GetOrAddTMPText(expTr.gameObject);
                 }
             }
 
@@ -591,7 +586,7 @@ public class UnitStatusUI : MonoBehaviour
     /// <summary>
     /// 버프 중첩 숫자를 버프 이미지의 우측 하단(Bottom-Right)에 통일된 규칙으로 배치합니다.
     /// </summary>
-    private void ApplyBottomRightCountTextLayout(Text txt)
+    private void ApplyBottomRightCountTextLayout(TextMeshProUGUI txt)
     {
         if (txt == null) return;
 
@@ -609,21 +604,15 @@ public class UnitStatusUI : MonoBehaviour
 
         txt.font = GetOrCreateFont();
         txt.fontSize = 13;
-        txt.fontStyle = FontStyle.Bold;
-        txt.alignment = TextAnchor.LowerRight;
+        txt.fontStyle = FontStyles.Bold;
+        txt.alignment = TextAlignmentOptions.BottomRight;
         txt.color = new Color(1f, 0.96f, 0.72f, 1f);
-        txt.horizontalOverflow = HorizontalWrapMode.Overflow;
-        txt.verticalOverflow = VerticalWrapMode.Overflow;
+        txt.textWrappingMode = TextWrappingModes.NoWrap;
+        txt.overflowMode = TextOverflowModes.Overflow;
         txt.raycastTarget = false;
-
-        Outline expOutline = txt.GetComponent<Outline>();
-        if (expOutline == null)
-            expOutline = txt.gameObject.AddComponent<Outline>();
-        expOutline.effectColor = new Color(0.02f, 0.05f, 0.12f, 0.98f);
-        expOutline.effectDistance = new Vector2(1.4f, -1.4f);
     }
 
-    private static Font GetOrCreateFont() => UIHelper.GetOrCreateFont();
+    private static TMP_FontAsset GetOrCreateFont() => UIHelper.GetOrCreateTMPFont();
 
     public static Sprite GetOrCreateSolidWhiteSprite() => UIHelper.GetOrCreateSolidWhiteSprite();
 

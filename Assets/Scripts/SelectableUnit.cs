@@ -20,7 +20,7 @@ public struct PlayerSkillMetadata
 /// 4) 체력 0 도달 시 사망 판정 및 서서히 옅어지며 사라지는(Fade-out) 연출을 담당합니다.
 /// </summary>
 [RequireComponent(typeof(Collider2D))]
-public class SelectableUnit : MonoBehaviour, IPointerClickHandler
+public class SelectableUnit : MonoBehaviour, IPointerClickHandler, IPointerEnterHandler, IPointerExitHandler
 {
     [Header("유닛 구분 및 인덱스")]
     [SerializeField] private bool isPlayerUnit = true;
@@ -195,6 +195,11 @@ public class SelectableUnit : MonoBehaviour, IPointerClickHandler
 
     private void Start()
     {
+        if (Camera.main != null && Camera.main.GetComponent<Physics2DRaycaster>() == null)
+        {
+            Camera.main.gameObject.AddComponent<Physics2DRaycaster>();
+        }
+
         EnsureStatusUI();
         EnsureSkillUI();
         RefreshStatusUI();
@@ -950,9 +955,46 @@ public class SelectableUnit : MonoBehaviour, IPointerClickHandler
         transform.localScale = baseLocalScale;
     }
 
+    private bool CanInteractWithPlayerObject()
+    {
+        if (!isPlayerUnit || IsDead) return false;
+        if (PauseMenuManager.Ins != null && PauseMenuManager.Ins.IsPaused) return false;
+        if (SkillConfirmModalUI.Ins != null && SkillConfirmModalUI.Ins.IsModalOpen) return false;
+        if (DeckViewerModalUI.Ins != null && DeckViewerModalUI.Ins.IsModalOpen) return false;
+        if (BattleManager.Ins != null && !BattleManager.Ins.IsPlayerInputAllowed) return false;
+        return true;
+    }
+
+    public void OnPointerEnter(PointerEventData eventData)
+    {
+        if (!CanInteractWithPlayerObject()) return;
+
+        CacheDefaultsIfNeeded();
+        transform.localScale = baseLocalScale * 1.15f;
+    }
+
+    public void OnPointerExit(PointerEventData eventData)
+    {
+        if (!isPlayerUnit) return;
+
+        CacheDefaultsIfNeeded();
+        transform.localScale = baseLocalScale;
+    }
+
     public void OnPointerClick(PointerEventData eventData)
     {
-        // 플레이어 및 Enemy 오브젝트 클릭 선택 기능 삭제됨
+        if (!CanInteractWithPlayerObject()) return;
+
+        CacheDefaultsIfNeeded();
+        transform.localScale = baseLocalScale;
+
+        if (SoundManager.Ins != null)
+            SoundManager.Ins.PlayUIClick();
+
+        if (DeckViewerModalUI.Ins != null)
+        {
+            DeckViewerModalUI.Ins.OpenPlayerDeckModal(this);
+        }
     }
 
     private void OnValidate()

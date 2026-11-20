@@ -1,4 +1,5 @@
 using System.Collections;
+using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -35,14 +36,14 @@ public class Card : MonoBehaviour,
     [SerializeField] private Image ownerPortraitImage;   // 카드 상단 그림칸에 들어가는 소유 플레이어 도형 이미지
     [SerializeField] private Image orderNumberImage;     // (레거시 호환) 순서 숫자 이미지
     [SerializeField] private Vector2 orderNumberSize = new Vector2(68f, 68f);
-    [SerializeField] private Text cardTypeLabelText;     // 카드 이름(Buster / Arts / Quick / Super Buster) 표시 텍스트
-    [SerializeField] private Text cardEffectDescText;    // 카드 효과 요약 텍스트
-    [SerializeField] private Text critStarBadgeText;     // 부여된 스타/크리티컬 확률 표시 텍스트
+    [SerializeField] private TextMeshProUGUI cardTypeLabelText;     // 카드 이름(Buster / Arts / Quick / Super Buster) 표시 텍스트
+    [SerializeField] private TextMeshProUGUI cardEffectDescText;    // 카드 효과 요약 텍스트
+    [SerializeField] private TextMeshProUGUI critStarBadgeText;     // 부여된 스타/크리티컬 확률 표시 텍스트
 
     [Header("슬레이 더 스파이어2 스타일 코스트(Cost) 설정 (좌측 상단 젬)")]
     [SerializeField] private int baseCardCost = 1;
     [SerializeField] private bool hasZeroCostOverride = false;
-    [SerializeField] private Text costText;
+    [SerializeField] private TextMeshProUGUI costText;
     [SerializeField] private Vector2 handCostOffset = new Vector2(26.5f, -26.5f);
     [SerializeField] private Vector2 boxCostOffset = new Vector2(15.5f, -15.5f);
 
@@ -483,12 +484,12 @@ public class Card : MonoBehaviour,
         {
             Transform lblTr = transform.Find("CardTypeLabel");
             if (lblTr != null)
-                cardTypeLabelText = lblTr.GetComponent<Text>();
+                cardTypeLabelText = UIHelper.GetOrAddTMPText(lblTr.gameObject);
         }
 
         if (cardTypeLabelText == null)
         {
-            GameObject lblObj = new GameObject("CardTypeLabel", typeof(RectTransform), typeof(CanvasRenderer), typeof(Text), typeof(Outline));
+            GameObject lblObj = new GameObject("CardTypeLabel", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
             lblObj.layer = gameObject.layer;
             lblObj.transform.SetParent(transform, false);
 
@@ -500,18 +501,14 @@ public class Card : MonoBehaviour,
             rt.sizeDelta = new Vector2(150f, 28f);
             rt.localScale = Vector3.one;
 
-            cardTypeLabelText = lblObj.GetComponent<Text>();
+            cardTypeLabelText = lblObj.GetComponent<TextMeshProUGUI>();
             cardTypeLabelText.font = GetOrCreateCardFont();
             cardTypeLabelText.fontSize = 20;
-            cardTypeLabelText.fontStyle = FontStyle.Bold;
-            cardTypeLabelText.alignment = TextAnchor.MiddleCenter;
-            cardTypeLabelText.horizontalOverflow = HorizontalWrapMode.Overflow;
-            cardTypeLabelText.verticalOverflow = VerticalWrapMode.Overflow;
+            cardTypeLabelText.fontStyle = FontStyles.Bold;
+            cardTypeLabelText.alignment = TextAlignmentOptions.Midline;
+            cardTypeLabelText.textWrappingMode = TextWrappingModes.NoWrap;
+            cardTypeLabelText.overflowMode = TextOverflowModes.Overflow;
             cardTypeLabelText.raycastTarget = false;
-
-            Outline outline = lblObj.GetComponent<Outline>();
-            outline.effectColor = new Color(0.02f, 0.04f, 0.10f, 0.95f);
-            outline.effectDistance = new Vector2(1.5f, -1.5f);
         }
         else
         {
@@ -522,12 +519,12 @@ public class Card : MonoBehaviour,
         {
             Transform descTr = transform.Find("CardEffectDesc");
             if (descTr != null)
-                cardEffectDescText = descTr.GetComponent<Text>();
+                cardEffectDescText = UIHelper.GetOrAddTMPText(descTr.gameObject);
         }
 
         if (cardEffectDescText == null)
         {
-            GameObject descObj = new GameObject("CardEffectDesc", typeof(RectTransform), typeof(CanvasRenderer), typeof(Text), typeof(Outline));
+            GameObject descObj = new GameObject("CardEffectDesc", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
             descObj.layer = gameObject.layer;
             descObj.transform.SetParent(transform, false);
 
@@ -539,30 +536,26 @@ public class Card : MonoBehaviour,
             rt.sizeDelta = new Vector2(148f, 42f);
             rt.localScale = Vector3.one;
 
-            cardEffectDescText = descObj.GetComponent<Text>();
+            cardEffectDescText = descObj.GetComponent<TextMeshProUGUI>();
             cardEffectDescText.font = GetOrCreateCardFont();
             cardEffectDescText.fontSize = 12;
-            cardEffectDescText.fontStyle = FontStyle.Bold;
-            cardEffectDescText.alignment = TextAnchor.MiddleCenter;
-            cardEffectDescText.horizontalOverflow = HorizontalWrapMode.Overflow;
-            cardEffectDescText.verticalOverflow = VerticalWrapMode.Overflow;
+            cardEffectDescText.fontStyle = FontStyles.Bold;
+            cardEffectDescText.alignment = TextAlignmentOptions.Midline;
+            cardEffectDescText.textWrappingMode = TextWrappingModes.NoWrap;
+            cardEffectDescText.overflowMode = TextOverflowModes.Overflow;
             cardEffectDescText.raycastTarget = false;
-
-            Outline outline = descObj.GetComponent<Outline>();
-            outline.effectColor = new Color(0.01f, 0.02f, 0.06f, 0.98f);
-            outline.effectDistance = new Vector2(1.2f, -1.2f);
         }
 
         if (critStarBadgeText == null)
         {
             Transform critTr = transform.Find("CritStarBadge");
             if (critTr != null)
-                critStarBadgeText = critTr.GetComponent<Text>();
+                critStarBadgeText = UIHelper.GetOrAddTMPText(critTr.gameObject);
         }
 
         if (critStarBadgeText == null)
         {
-            GameObject critObj = new GameObject("CritStarBadge", typeof(RectTransform), typeof(CanvasRenderer), typeof(Text), typeof(Outline));
+            GameObject critObj = new GameObject("CritStarBadge", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
             critObj.layer = gameObject.layer;
             critObj.transform.SetParent(transform, false);
 
@@ -574,19 +567,15 @@ public class Card : MonoBehaviour,
             rt.sizeDelta = new Vector2(110f, 24f);
             rt.localScale = Vector3.one;
 
-            critStarBadgeText = critObj.GetComponent<Text>();
+            critStarBadgeText = critObj.GetComponent<TextMeshProUGUI>();
             critStarBadgeText.font = GetOrCreateCardFont();
             critStarBadgeText.fontSize = 15;
-            critStarBadgeText.fontStyle = FontStyle.Bold;
-            critStarBadgeText.alignment = TextAnchor.MiddleCenter;
+            critStarBadgeText.fontStyle = FontStyles.Bold;
+            critStarBadgeText.alignment = TextAlignmentOptions.Midline;
             critStarBadgeText.color = new Color(1f, 0.88f, 0.25f, 1f);
-            critStarBadgeText.horizontalOverflow = HorizontalWrapMode.Overflow;
-            critStarBadgeText.verticalOverflow = VerticalWrapMode.Overflow;
+            critStarBadgeText.textWrappingMode = TextWrappingModes.NoWrap;
+            critStarBadgeText.overflowMode = TextOverflowModes.Overflow;
             critStarBadgeText.raycastTarget = false;
-
-            Outline outline = critObj.GetComponent<Outline>();
-            outline.effectColor = new Color(0.15f, 0.06f, 0.01f, 0.98f);
-            outline.effectDistance = new Vector2(1.4f, -1.4f);
 
             critObj.SetActive(false);
         }
@@ -600,12 +589,12 @@ public class Card : MonoBehaviour,
         {
             Transform costTr = transform.Find("CostText");
             if (costTr != null)
-                costText = costTr.GetComponent<Text>();
+                costText = UIHelper.GetOrAddTMPText(costTr.gameObject);
         }
 
         if (costText == null)
         {
-            GameObject costObj = new GameObject("CostText", typeof(RectTransform), typeof(CanvasRenderer), typeof(Text), typeof(Outline), typeof(Shadow));
+            GameObject costObj = new GameObject("CostText", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
             costObj.layer = gameObject.layer;
             costObj.transform.SetParent(transform, false);
 
@@ -617,23 +606,15 @@ public class Card : MonoBehaviour,
             rt.sizeDelta = new Vector2(40f, 40f);
             rt.localScale = Vector3.one;
 
-            costText = costObj.GetComponent<Text>();
+            costText = costObj.GetComponent<TextMeshProUGUI>();
             costText.font = GetOrCreateCardFont();
             costText.fontSize = isInAttackBox ? 14 : 22;
-            costText.fontStyle = FontStyle.Bold;
-            costText.alignment = TextAnchor.MiddleCenter;
+            costText.fontStyle = FontStyles.Bold;
+            costText.alignment = TextAlignmentOptions.Midline;
             costText.color = Color.white;
-            costText.horizontalOverflow = HorizontalWrapMode.Overflow;
-            costText.verticalOverflow = VerticalWrapMode.Overflow;
+            costText.textWrappingMode = TextWrappingModes.NoWrap;
+            costText.overflowMode = TextOverflowModes.Overflow;
             costText.raycastTarget = false;
-
-            Outline outline = costObj.GetComponent<Outline>();
-            outline.effectColor = new Color(0.08f, 0.04f, 0.02f, 0.98f);
-            outline.effectDistance = new Vector2(1.8f, -1.8f);
-
-            Shadow shadow = costObj.GetComponent<Shadow>();
-            shadow.effectColor = new Color(0f, 0f, 0f, 0.85f);
-            shadow.effectDistance = new Vector2(0f, -2.5f);
         }
 
         RefreshCostText();
@@ -666,7 +647,7 @@ public class Card : MonoBehaviour,
         costText.gameObject.SetActive(true);
     }
 
-    private static Font GetOrCreateCardFont() => UIHelper.GetOrCreateFont();
+    private static TMP_FontAsset GetOrCreateCardFont() => UIHelper.GetOrCreateTMPFont();
 
     private void Start()
     {
@@ -687,6 +668,7 @@ public class Card : MonoBehaviour,
         if (isAnimatingFlight) return false;
         if (PauseMenuManager.Ins != null && PauseMenuManager.Ins.IsPaused) return false;
         if (SkillConfirmModalUI.Ins != null && SkillConfirmModalUI.Ins.IsModalOpen) return false;
+        if (DeckViewerModalUI.Ins != null && DeckViewerModalUI.Ins.IsModalOpen) return false;
 
         return BattleManager.Ins == null || BattleManager.Ins.IsPlayerInputAllowed;
     }

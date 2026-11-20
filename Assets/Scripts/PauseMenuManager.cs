@@ -1,3 +1,4 @@
+using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
@@ -19,11 +20,11 @@ public class PauseMenuManager : Singleton<PauseMenuManager>
     [Header("사운드 조절 UI 참조 (미할당 시 PauseMenuWindow 하위에 자동 생성/연결)")]
     [SerializeField] private RectTransform soundControlGroup;
     [SerializeField] private Slider soundVolumeSlider;
-    [SerializeField] private Text soundValueText;
+    [SerializeField] private TextMeshProUGUI soundValueText;
     [SerializeField] private Button volumeDownButton;
     [SerializeField] private Button volumeUpButton;
     [SerializeField] private Button muteToggleButton;
-    [SerializeField] private Text muteToggleButtonText;
+    [SerializeField] private TextMeshProUGUI muteToggleButtonText;
 
     [Header("화면 어두워짐(Dim) 및 시간 정지 설정")]
     [SerializeField] private Color dimOverlayColor = new Color(0f, 0f, 0f, 0.72f); // ESC 눌렀을 때 화면 어두워지는 색상/투명도
@@ -64,6 +65,17 @@ public class PauseMenuManager : Singleton<PauseMenuManager>
     {
         if (WasEscapePressedThisFrame())
         {
+            if (DeckViewerModalUI.Ins != null && DeckViewerModalUI.Ins.IsModalOpen)
+            {
+                DeckViewerModalUI.Ins.OnClickClose();
+                return;
+            }
+            if (SkillConfirmModalUI.Ins != null && SkillConfirmModalUI.Ins.IsModalOpen)
+            {
+                SkillConfirmModalUI.Ins.OnClickCancel();
+                return;
+            }
+
             TogglePauseMenu();
         }
     }
@@ -350,6 +362,7 @@ public class PauseMenuManager : Singleton<PauseMenuManager>
             }
             else
             {
+                UIHelper.GetOrAddTMPText(titleTr.gameObject);
                 RectTransform titleRt = titleTr.GetComponent<RectTransform>();
                 if (titleRt != null)
                 {
@@ -375,6 +388,7 @@ public class PauseMenuManager : Singleton<PauseMenuManager>
             }
             else
             {
+                UIHelper.GetOrAddTMPText(hintTr.gameObject);
                 RectTransform hintRt = hintTr.GetComponent<RectTransform>();
                 if (hintRt != null)
                 {
@@ -445,6 +459,7 @@ public class PauseMenuManager : Singleton<PauseMenuManager>
         // 버튼 위치 및 클릭 이벤트 연결 보장
         if (quitGameButton != null)
         {
+            UIHelper.FindOrConvertTMPText(quitGameButton.transform, "QuitButtonText");
             RectTransform btnRt = quitGameButton.GetComponent<RectTransform>();
             if (btnRt != null)
             {
@@ -459,6 +474,7 @@ public class PauseMenuManager : Singleton<PauseMenuManager>
 
             quitGameButton.onClick.RemoveListener(QuitGame);
             quitGameButton.onClick.AddListener(QuitGame);
+            UIHelper.EnsureHoverScale(quitGameButton.gameObject, 1.10f);
         }
     }
 
@@ -502,7 +518,7 @@ public class PauseMenuManager : Singleton<PauseMenuManager>
 
         // 1) "사운드 조절 (SFX)" 라벨 텍스트
         Transform labelTr = soundControlGroup.Find("SoundLabelText");
-        Text labelText = labelTr != null ? labelTr.GetComponent<Text>() : null;
+        TextMeshProUGUI labelText = labelTr != null ? UIHelper.GetOrAddTMPText(labelTr.gameObject) : null;
         if (labelText == null)
         {
             labelText = CreateTextElement(
@@ -517,7 +533,7 @@ public class PauseMenuManager : Singleton<PauseMenuManager>
             );
         }
         if (labelText.font == null) labelText.font = GetOrCreateKoreanFont();
-        labelText.alignment = TextAnchor.MiddleLeft;
+        labelText.alignment = TextAlignmentOptions.MidlineLeft;
         labelText.rectTransform.anchoredPosition = new Vector2(-118f, 26f);
         labelText.rectTransform.localPosition = new Vector3(-118f, 26f, 0f);
 
@@ -527,7 +543,7 @@ public class PauseMenuManager : Singleton<PauseMenuManager>
             Transform valTr = soundControlGroup.Find("SoundValueText");
             if (valTr != null)
             {
-                soundValueText = valTr.GetComponent<Text>();
+                soundValueText = UIHelper.GetOrAddTMPText(valTr.gameObject);
             }
             else
             {
@@ -544,7 +560,7 @@ public class PauseMenuManager : Singleton<PauseMenuManager>
             }
         }
         if (soundValueText.font == null) soundValueText.font = GetOrCreateKoreanFont();
-        soundValueText.alignment = TextAnchor.MiddleRight;
+        soundValueText.alignment = TextAlignmentOptions.MidlineRight;
         soundValueText.rectTransform.anchoredPosition = new Vector2(36f, 26f);
         soundValueText.rectTransform.localPosition = new Vector3(36f, 26f, 0f);
 
@@ -557,7 +573,7 @@ public class PauseMenuManager : Singleton<PauseMenuManager>
                 muteToggleButton = muteTr.GetComponent<Button>();
                 Transform txtTr = muteTr.Find("ButtonLabel");
                 if (txtTr != null)
-                    muteToggleButtonText = txtTr.GetComponent<Text>();
+                    muteToggleButtonText = UIHelper.GetOrAddTMPText(txtTr.gameObject);
             }
             else
             {
@@ -597,7 +613,7 @@ public class PauseMenuManager : Singleton<PauseMenuManager>
                 );
             }
         }
-        Text dummyDownTxt = null;
+        TextMeshProUGUI dummyDownTxt = null;
         EnsureSubButtonVisuals(volumeDownButton, ref dummyDownTxt);
         volumeDownButton.onClick.RemoveListener(OnVolumeDownClicked);
         volumeDownButton.onClick.AddListener(OnVolumeDownClicked);
@@ -623,7 +639,7 @@ public class PauseMenuManager : Singleton<PauseMenuManager>
                 );
             }
         }
-        Text dummyUpTxt = null;
+        TextMeshProUGUI dummyUpTxt = null;
         EnsureSubButtonVisuals(volumeUpButton, ref dummyUpTxt);
         volumeUpButton.onClick.RemoveListener(OnVolumeUpClicked);
         volumeUpButton.onClick.AddListener(OnVolumeUpClicked);
@@ -658,7 +674,7 @@ public class PauseMenuManager : Singleton<PauseMenuManager>
         }
     }
 
-    private static void EnsureSubButtonVisuals(Button btn, ref Text labelTxt)
+    private static void EnsureSubButtonVisuals(Button btn, ref TextMeshProUGUI labelTxt)
     {
         if (btn == null) return;
         Image img = btn.GetComponent<Image>();
@@ -668,7 +684,7 @@ public class PauseMenuManager : Singleton<PauseMenuManager>
         if (labelTxt == null)
         {
             Transform t = btn.transform.Find("ButtonLabel");
-            if (t != null) labelTxt = t.GetComponent<Text>();
+            if (t != null) labelTxt = UIHelper.GetOrAddTMPText(t.gameObject);
         }
         if (labelTxt != null && labelTxt.font == null)
             labelTxt.font = GetOrCreateKoreanFont();
@@ -708,7 +724,7 @@ public class PauseMenuManager : Singleton<PauseMenuManager>
         int fontSize,
         Vector2 anchoredPos,
         Vector2 sizeDelta,
-        out Text labelText)
+        out TextMeshProUGUI labelText)
     {
         GameObject btnObj = new GameObject(
             name,
@@ -863,7 +879,7 @@ public class PauseMenuManager : Singleton<PauseMenuManager>
         return slider;
     }
 
-    private static Text CreateTextElement(
+    private static TextMeshProUGUI CreateTextElement(
         Transform parent,
         string name,
         string content,
@@ -888,7 +904,7 @@ public class PauseMenuManager : Singleton<PauseMenuManager>
         );
     }
 
-    private static Font GetOrCreateKoreanFont() => UIHelper.GetOrCreateFont();
+    private static TMP_FontAsset GetOrCreateKoreanFont() => UIHelper.GetOrCreateTMPFont();
 
     /// <summary>
     /// 사이버 네온 스타일의 메뉴창 배경 프레임 스프라이트를 생성합니다.

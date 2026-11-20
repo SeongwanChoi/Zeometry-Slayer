@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
@@ -310,9 +311,7 @@ public class CombatEffectManager : Singleton<CombatEffectManager>
             isCritical ? $"DamagePopup_Crit_{damageTextStr}" : $"DamagePopup_{damageTextStr}",
             typeof(RectTransform),
             typeof(CanvasRenderer),
-            typeof(Text),
-            typeof(Outline),
-            typeof(Shadow)
+            typeof(TextMeshProUGUI)
         );
         popupObj.layer = LayerMask.NameToLayer("UI");
         popupObj.transform.SetParent(root, false);
@@ -325,36 +324,23 @@ public class CombatEffectManager : Singleton<CombatEffectManager>
         popupRt.sizeDelta = new Vector2(260f, 90f);
         popupRt.localScale = Vector3.one * 0.35f;
 
-        Text txt = popupObj.GetComponent<Text>();
+        TextMeshProUGUI txt = popupObj.GetComponent<TextMeshProUGUI>();
         txt.font = GetOrCreateDamageFont();
         txt.text = damageTextStr;
         txt.fontSize = isCritical ? criticalDamageFontSize : normalDamageFontSize;
-        txt.fontStyle = FontStyle.Bold;
-        txt.alignment = TextAnchor.MiddleCenter;
-        txt.horizontalOverflow = HorizontalWrapMode.Overflow;
-        txt.verticalOverflow = VerticalWrapMode.Overflow;
+        txt.fontStyle = FontStyles.Bold;
+        txt.alignment = TextAlignmentOptions.Midline;
+        txt.textWrappingMode = TextWrappingModes.NoWrap;
+        txt.overflowMode = TextOverflowModes.Overflow;
         txt.raycastTarget = false;
         txt.color = isCritical ? criticalDamageColor : normalDamageColor;
-
-        // 슬레이 더 스파이어 스타일의 두껍고 선명한 외곽선 + 그림자
-        Outline outline = popupObj.GetComponent<Outline>();
-        outline.effectColor = isCritical
-            ? new Color(0.16f, 0.07f, 0.01f, 0.98f)
-            : new Color(0.04f, 0.06f, 0.12f, 0.98f);
-        outline.effectDistance = isCritical ? new Vector2(3.0f, -3.0f) : new Vector2(2.4f, -2.4f);
-        outline.useGraphicAlpha = true;
-
-        Shadow shadow = popupObj.GetComponent<Shadow>();
-        shadow.effectColor = new Color(0f, 0f, 0f, 0.88f);
-        shadow.effectDistance = isCritical ? new Vector2(0f, -4.8f) : new Vector2(0f, -3.8f);
-        shadow.useGraphicAlpha = true;
 
         StartCoroutine(CoAnimateDamagePopup(popupRt, txt, startAnchoredPos, isCritical));
     }
 
     private IEnumerator CoAnimateDamagePopup(
         RectTransform popupRt,
-        Text popupText,
+        TextMeshProUGUI popupText,
         Vector2 startPos,
         bool isCritical)
     {
@@ -492,7 +478,7 @@ public class CombatEffectManager : Singleton<CombatEffectManager>
         return damagePopupRoot;
     }
 
-    private static Font GetOrCreateDamageFont() => UIHelper.GetOrCreateFont();
+    private static TMP_FontAsset GetOrCreateDamageFont() => UIHelper.GetOrCreateTMPFont();
 
     // =========================================================================
     // FGO 스타일 크리티컬 스타(Star) 비주얼 연출 시스템:
