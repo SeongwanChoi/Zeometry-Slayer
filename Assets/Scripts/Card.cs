@@ -25,9 +25,9 @@ public class Card : MonoBehaviour,
     [SerializeField] private Sprite blueCardSprite;
     [SerializeField] private Sprite greenCardSprite;
 
-    [Header("호버(마우스 오버) 설정")]
-    [SerializeField] private float hoverScale = 1.15f;
-    [SerializeField] private float hoverYOffset = 42f;
+    [Header("호버(마우스 오버) 설정 (방법 B: 하단 끝선이 들리지 않도록 확대량 >= 상승량 유지)")]
+    [SerializeField] private float hoverScale = 1.22f;
+    [SerializeField] private float hoverYOffset = 16f;
 
     [Header("카드 내부 UI 요소 참조")]
     [SerializeField] private Color normalCardColor = Color.white;
@@ -136,6 +136,13 @@ public class Card : MonoBehaviour,
             canvasGroup = GetComponent<CanvasGroup>();
             if (canvasGroup == null)
                 canvasGroup = gameObject.AddComponent<CanvasGroup>();
+        }
+
+        // 방법 B 호버 떨림 방지: 기존 프리팹 직렬화 값(1.15 / 40~42)이 남아있으면 안전한 수치(1.22 / 16)로 자동 보정
+        if (hoverScale <= 1.16f && hoverYOffset >= 35f)
+        {
+            hoverScale = 1.22f;
+            hoverYOffset = 16f;
         }
 
         EnsureOwnerPortraitImage();

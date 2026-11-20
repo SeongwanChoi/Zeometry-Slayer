@@ -108,8 +108,8 @@ MonoBehaviour:
   redCardSprite: {fileID: -828483678819365525, guid: d9cd029c0a892884595f903ce6441bb9, type: 3}
   blueCardSprite: {fileID: 8322382612814548259, guid: d945f7a5b1e525447b9bc17f7cd88b09, type: 3}
   greenCardSprite: {fileID: -8106867172880479415, guid: a564617e4b727b647af2ad21d986bce8, type: 3}
-  hoverScale: 1.15
-  hoverYOffset: 40
+  hoverScale: 1.22
+  hoverYOffset: 16
   normalCardColor: {r: 1, g: 1, b: 1, a: 1}
   attackBoxDarkColor: {r: 0.6117647, g: 0.59607846, b: 0.59607846, a: 1}
   orderNumberImage: {fileID: 8195904928496856867}

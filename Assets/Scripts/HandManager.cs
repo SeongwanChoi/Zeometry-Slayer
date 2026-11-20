@@ -38,7 +38,7 @@ public class HandManager : Singleton<HandManager>
     [Range(0, 10)]
     [SerializeField] private int targetHandCount = 5;
 
-    [Header("슬레이 더 스파이어2풍 완만한 부채꼴 배치 설정 (최대 10장 대응)")]
+    [Header("완만한 부채꼴 배치 설정 (최대 10장 대응)")]
     [SerializeField] private float cardSpacing = 122f;
     [SerializeField] private float angleStep = 4.0f;
     [SerializeField] private float arcDropPerStep = 9f;
