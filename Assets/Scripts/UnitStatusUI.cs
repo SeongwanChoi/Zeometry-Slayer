@@ -18,7 +18,10 @@ public class UnitStatusUI : MonoBehaviour
     [SerializeField] private CanvasGroup canvasGroup;
     [SerializeField] private RectTransform hpFillRect;
     [SerializeField] private Image hpFillImage;
+    [SerializeField] private RectTransform hpDamagePreviewRect;
+    [SerializeField] private Image hpDamagePreviewImage;
     [SerializeField] private TextMeshProUGUI hpValueText;
+    [SerializeField] private TextMeshProUGUI hpDamagePreviewText;
 
     [Header("버프(단일 아이콘 + 우측 하단 중첩 숫자) UI 참조")]
     [SerializeField] private RectTransform buffContainerRect;
@@ -44,6 +47,9 @@ public class UnitStatusUI : MonoBehaviour
 
     private Canvas parentCanvas;
     private RectTransform canvasRect;
+
+    private bool isPreviewingDamage = false;
+    private float previewDamageAmount = 0f;
 
     private static Sprite cachedFeatherSprite;
 
@@ -118,6 +124,44 @@ public class UnitStatusUI : MonoBehaviour
     }
 
     /// <summary>
+    /// 공격 카드로 이 적을 타겟팅 중일 때(EnemyTargetBrackets 활성화 시)
+    /// 현재 체력 게이지의 오른쪽에서부터 줄어들 예상 피해량을 짙은 붉은색 게이지와 텍스트 수치로 미리 표시합니다.
+    /// </summary>
+    public void SetDamagePreview(float previewDamage)
+    {
+        bool shouldPreview = previewDamage > 0.001f;
+        if (isPreviewingDamage == shouldPreview && Mathf.Approximately(previewDamageAmount, previewDamage))
+            return;
+
+        isPreviewingDamage = shouldPreview;
+        previewDamageAmount = Mathf.Max(0f, previewDamage);
+
+        if (targetUnit != null)
+        {
+            RefreshStatus(targetUnit.CurrentHp, targetUnit.MaxHp, targetUnit.BuffCount);
+        }
+    }
+
+    public void ClearDamagePreview()
+    {
+        if (!isPreviewingDamage && previewDamageAmount <= 0f)
+            return;
+
+        isPreviewingDamage = false;
+        previewDamageAmount = 0f;
+
+        if (targetUnit != null)
+        {
+            RefreshStatus(targetUnit.CurrentHp, targetUnit.MaxHp, targetUnit.BuffCount);
+        }
+        else
+        {
+            if (hpDamagePreviewRect != null) hpDamagePreviewRect.gameObject.SetActive(false);
+            if (hpDamagePreviewText != null) hpDamagePreviewText.gameObject.SetActive(false);
+        }
+    }
+
+    /// <summary>
     /// 현재 체력/최대 체력 및 버프(단일 아이콘 + 우측 하단 중첩 숫자)를 UI에 즉시 반영합니다.
     /// </summary>
     public void RefreshStatus(float currentHp, float maxHp, int buffCount)
@@ -126,26 +170,81 @@ public class UnitStatusUI : MonoBehaviour
 
         float safeMax = Mathf.Max(1f, maxHp);
         float clampedHp = Mathf.Clamp(currentHp, 0f, safeMax);
-        float ratio = Mathf.Clamp01(clampedHp / safeMax);
+        float currentRatio = Mathf.Clamp01(clampedHp / safeMax);
+
+        bool showDamagePreview = isPreviewingDamage && previewDamageAmount > 0.001f && clampedHp > 0f;
+        float afterHp = showDamagePreview ? Mathf.Clamp(clampedHp - previewDamageAmount, 0f, safeMax) : clampedHp;
+        float afterRatio = Mathf.Clamp01(afterHp / safeMax);
 
         if (hpFillRect != null)
         {
             hpFillRect.anchorMin = Vector2.zero;
-            hpFillRect.anchorMax = new Vector2(ratio, 1f);
+            hpFillRect.anchorMax = new Vector2(showDamagePreview ? afterRatio : currentRatio, 1f);
             hpFillRect.offsetMin = Vector2.zero;
             hpFillRect.offsetMax = Vector2.zero;
         }
 
         if (hpFillImage != null)
         {
-            hpFillImage.fillAmount = ratio;
+            hpFillImage.fillAmount = showDamagePreview ? afterRatio : currentRatio;
+        }
+
+        // 오른쪽에서부터 줄어들 체력 구간(afterRatio ~ currentRatio)을 짙은 붉은색으로 미리 표시
+        if (hpDamagePreviewRect != null)
+        {
+            if (showDamagePreview && currentRatio > afterRatio)
+            {
+                hpDamagePreviewRect.gameObject.SetActive(true);
+                hpDamagePreviewRect.anchorMin = new Vector2(afterRatio, 0f);
+                hpDamagePreviewRect.anchorMax = new Vector2(currentRatio, 1f);
+                hpDamagePreviewRect.offsetMin = Vector2.zero;
+                hpDamagePreviewRect.offsetMax = Vector2.zero;
+
+                if (hpDamagePreviewImage != null)
+                {
+                    hpDamagePreviewImage.color = new Color(0.38f, 0.02f, 0.05f, 0.98f);
+                }
+            }
+            else
+            {
+                hpDamagePreviewRect.gameObject.SetActive(false);
+            }
         }
 
         if (hpValueText != null)
         {
             int maxInt = Mathf.RoundToInt(safeMax);
-            string curStr = UIHelper.FormatCompactNumber(clampedHp);
-            hpValueText.text = $"{curStr}/{maxInt}";
+            if (showDamagePreview)
+            {
+                string afterStr = UIHelper.FormatCompactNumber(afterHp);
+                string dmgStr = UIHelper.FormatCompactNumber(previewDamageAmount);
+                hpValueText.richText = true;
+                hpValueText.text = $"{afterStr}/{maxInt} <color=#FF7A7A>(-{dmgStr})</color>";
+            }
+            else
+            {
+                string curStr = UIHelper.FormatCompactNumber(clampedHp);
+                hpValueText.text = $"{curStr}/{maxInt}";
+            }
+        }
+
+        if (hpDamagePreviewText != null)
+        {
+            if (showDamagePreview)
+            {
+                string dmgStr = UIHelper.FormatCompactNumber(previewDamageAmount);
+                hpDamagePreviewText.gameObject.SetActive(true);
+                hpDamagePreviewText.text = $"-{dmgStr}";
+
+                // 짙은 붉은색 감소 구간 바로 위에 수치 텍스트 배치
+                float midRatio = (afterRatio + currentRatio) * 0.5f;
+                float offsetX = (midRatio - 0.5f) * hpBarSize.x;
+                hpDamagePreviewText.rectTransform.anchoredPosition = new Vector2(offsetX, 19f);
+            }
+            else
+            {
+                hpDamagePreviewText.gameObject.SetActive(false);
+            }
         }
 
         int atkStacks = targetUnit != null ? targetUnit.GetSkillBuffStacks(ESkillType.ATTACK_UP) : 0;
@@ -387,6 +486,39 @@ public class UnitStatusUI : MonoBehaviour
             }
         }
 
+        // 2-1. 타겟팅 시 오른쪽에서부터 줄어들 체력을 미리 보여주는 짙은 붉은색 프리뷰 게이지 (HPDamagePreviewFill)
+        if (hpDamagePreviewRect == null || hpDamagePreviewImage == null)
+        {
+            Transform prevTr = fillAreaRect.Find("HPDamagePreviewFill");
+            if (prevTr == null)
+            {
+                GameObject prevObj = new GameObject("HPDamagePreviewFill", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+                prevObj.layer = LayerMask.NameToLayer("UI");
+                prevObj.transform.SetParent(fillAreaRect, false);
+
+                hpDamagePreviewRect = prevObj.GetComponent<RectTransform>();
+                hpDamagePreviewRect.anchorMin = new Vector2(1f, 0f);
+                hpDamagePreviewRect.anchorMax = new Vector2(1f, 1f);
+                hpDamagePreviewRect.pivot = new Vector2(1f, 0.5f);
+                hpDamagePreviewRect.offsetMin = Vector2.zero;
+                hpDamagePreviewRect.offsetMax = Vector2.zero;
+                hpDamagePreviewRect.localScale = Vector3.one;
+                hpDamagePreviewRect.localPosition = Vector3.zero;
+
+                hpDamagePreviewImage = prevObj.GetComponent<Image>();
+                hpDamagePreviewImage.sprite = GetOrCreateSolidWhiteSprite();
+                hpDamagePreviewImage.color = new Color(0.38f, 0.02f, 0.05f, 0.98f); // 짙은 붉은색
+                hpDamagePreviewImage.raycastTarget = false;
+
+                prevObj.SetActive(false);
+            }
+            else
+            {
+                hpDamagePreviewRect = prevTr.GetComponent<RectTransform>();
+                hpDamagePreviewImage = prevTr.GetComponent<Image>();
+            }
+        }
+
         // 3. 체력 수치 텍스트 (예: 250/250, 50/50) - 항상 HP바 정중앙 정렬 보장
         if (hpValueText == null)
         {
@@ -425,6 +557,33 @@ public class UnitStatusUI : MonoBehaviour
             hpValueText.textWrappingMode = TextWrappingModes.NoWrap;
             hpValueText.overflowMode = TextOverflowModes.Overflow;
             hpValueText.raycastTarget = false;
+        }
+
+        // 3-1. 타겟팅 시 짙은 붉은색 감소 게이지 구간 바로 위에 표시되는 예상 피해량 수치 텍스트 (HPDamagePreviewText)
+        if (hpDamagePreviewText == null)
+        {
+            Transform prevTxtTr = bgRect.Find("HPDamagePreviewText");
+            if (prevTxtTr == null)
+            {
+                hpDamagePreviewText = UIHelper.CreateOutlinedText(
+                    bgRect,
+                    "HPDamagePreviewText",
+                    "-10",
+                    15,
+                    FontStyle.Bold,
+                    new Color(1.0f, 0.35f, 0.38f, 1f),
+                    new Vector2(0f, 19f),
+                    new Vector2(90f, 22f),
+                    TextAnchor.MiddleCenter,
+                    new Color(0.12f, 0.01f, 0.02f, 0.98f),
+                    new Vector2(1.5f, -1.5f)
+                );
+                hpDamagePreviewText.gameObject.SetActive(false);
+            }
+            else
+            {
+                hpDamagePreviewText = UIHelper.GetOrAddTMPText(prevTxtTr.gameObject);
+            }
         }
 
         // 4. 체력바 아래 버프 컨테이너: 적 FeatherBuffSingle 및 플레이어 스킬 버프 3종 (중첩 숫자는 모두 우측 하단 통일)

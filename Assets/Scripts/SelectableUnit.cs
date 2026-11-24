@@ -746,6 +746,7 @@ public class SelectableUnit : MonoBehaviour, IPointerClickHandler, IPointerEnter
         }
 
         currentHp = Mathf.Max(0f, currentHp - finalDamage);
+        ClearDamagePreview();
         RefreshStatusUI();
 
         if (currentHp <= 0f)
@@ -937,6 +938,22 @@ public class SelectableUnit : MonoBehaviour, IPointerClickHandler, IPointerEnter
         if (statusUI != null)
         {
             statusUI.RefreshStatus(currentHp, maxHp, buffCount);
+        }
+    }
+
+    public void SetDamagePreview(float previewDamage)
+    {
+        if (statusUI != null)
+        {
+            statusUI.SetDamagePreview(previewDamage);
+        }
+    }
+
+    public void ClearDamagePreview()
+    {
+        if (statusUI != null)
+        {
+            statusUI.ClearDamagePreview();
         }
     }
 

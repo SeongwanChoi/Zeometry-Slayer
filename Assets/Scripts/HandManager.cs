@@ -2,7 +2,6 @@ using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
-using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 [System.Serializable]
@@ -52,9 +51,6 @@ public class HandManager : Singleton<HandManager>
     [SerializeField] private TextMeshProUGUI discardPileCountText;
     [SerializeField] private RectTransform turnEndButtonRoot;
     [SerializeField] private Button turnEndButton;
-
-    [Header("테스트 단축키 설정")]
-    [SerializeField] private bool enableTestHotkeys = false;
 
     // 통합 덱(Draw Pile) 및 버린 카드 더미(Discard Pile)
     private readonly List<DeckCardEntry> drawPile = new List<DeckCardEntry>();
@@ -152,20 +148,6 @@ public class HandManager : Singleton<HandManager>
             blueCardSprite = defaultCardSprite;
         if (defaultCardSprite == null && blueCardSprite != null)
             defaultCardSprite = blueCardSprite;
-    }
-
-    private void Update()
-    {
-        if (!enableTestHotkeys || Keyboard.current == null) return;
-
-        if (Keyboard.current.spaceKey.wasPressedThisFrame)
-        {
-            DrawCards(1);
-        }
-        else if (Keyboard.current.backspaceKey.wasPressedThisFrame)
-        {
-            RemoveLastCard();
-        }
     }
 
     private void OnValidate()

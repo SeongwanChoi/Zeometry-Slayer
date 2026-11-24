@@ -214,9 +214,9 @@ public class SplineTargetingArrow : Singleton<SplineTargetingArrow>
 
     /// <summary>
     /// 카드를 잡고 PlayerHand 밖으로 나왔을 때 매 프레임 호출되어
-    /// Spline 화살표 궤적과 Enemy 오브젝트 Hover 타겟팅 UI를 실시간 갱신합니다.
+    /// Spline 화살표 궤적과 Enemy 오브젝트 Hover 타겟팅 UI 및 적 HP 감소 프리뷰를 실시간 갱신합니다.
     /// </summary>
-    public void UpdateTargetingArrow(Vector2 startCanvasLocalPos, Vector2 mouseScreenPos)
+    public void UpdateTargetingArrow(Vector2 startCanvasLocalPos, Vector2 mouseScreenPos, Card activeCard = null)
     {
         InitializeSplineAndUI();
         if (arrowRootRect == null || canvasRect == null) return;
@@ -235,8 +235,13 @@ public class SplineTargetingArrow : Singleton<SplineTargetingArrow>
         RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, mouseScreenPos, uiCam, out Vector2 endCanvasLocalPos);
 
         // 1) 마우스 포인터 아래에 살아있는 Enemy 오브젝트가 있는지 감지
-        currentHoveredEnemy = DetectHoveredEnemy(mouseScreenPos);
-        UpdateEnemyTargetBrackets(currentHoveredEnemy);
+        SelectableUnit newHoveredEnemy = DetectHoveredEnemy(mouseScreenPos);
+        if (currentHoveredEnemy != null && currentHoveredEnemy != newHoveredEnemy)
+        {
+            currentHoveredEnemy.ClearDamagePreview();
+        }
+        currentHoveredEnemy = newHoveredEnemy;
+        UpdateEnemyTargetBrackets(currentHoveredEnemy, activeCard);
 
         // 2) UnityEngine.Splines의 BezierKnot 2개(시작점: 카드 상단, 끝점: 마우스 위치) 및 아치형 탄젠트 설정
         float dx = endCanvasLocalPos.x - startCanvasLocalPos.x;
@@ -305,6 +310,11 @@ public class SplineTargetingArrow : Singleton<SplineTargetingArrow>
 
     public void HideArrow()
     {
+        if (currentHoveredEnemy != null)
+        {
+            currentHoveredEnemy.ClearDamagePreview();
+        }
+
         isArrowActive = false;
         currentHoveredEnemy = null;
 
@@ -341,7 +351,7 @@ public class SplineTargetingArrow : Singleton<SplineTargetingArrow>
         return null;
     }
 
-    private void UpdateEnemyTargetBrackets(SelectableUnit targetEnemy)
+    private void UpdateEnemyTargetBrackets(SelectableUnit targetEnemy, Card activeCard = null)
     {
         if (targetBracketRoot == null) return;
 
@@ -363,6 +373,10 @@ public class SplineTargetingArrow : Singleton<SplineTargetingArrow>
         float pulse = Mathf.Sin(Time.unscaledTime * 8f) * 8f;
         float boxSize = 185f + pulse;
         targetBracketRoot.sizeDelta = new Vector2(boxSize, boxSize);
+
+        // 적 HP바에 오른쪽에서부터 줄어들 예상 피해량(짙은 붉은색 게이지 + 수치 텍스트) 표시
+        float previewDamage = activeCard != null ? activeCard.CalculatePreviewDamageAgainst(targetEnemy) : 0f;
+        targetEnemy.SetDamagePreview(previewDamage);
     }
 
     // =========================================================================

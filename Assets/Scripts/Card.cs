@@ -404,6 +404,30 @@ public class Card : MonoBehaviour,
         }
     }
 
+    /// <summary>
+    /// 이 카드로 특정 적을 타겟팅했을 때 적에게 들어갈 예상 피해량을 계산합니다.
+    /// (현재 보유/할당된 스타 합계가 10개 이상이어서 100% 치명타가 확정된 경우 치명타 배율까지 반영합니다.)
+    /// </summary>
+    public float CalculatePreviewDamageAgainst(SelectableUnit targetEnemy)
+    {
+        float dmg = CalculateCardRawDamage();
+
+        int availableStars = BattleResourceUIManager.Ins != null ? BattleResourceUIManager.Ins.CurrentStars : 0;
+        int totalStars = Mathf.Min(10, assignedStars + availableStars);
+        if (totalStars >= 10)
+        {
+            float critMult = ownerPlayerUnit != null ? ownerPlayerUnit.GetCriticalDamageMultiplier() : 2f;
+            dmg *= critMult;
+        }
+
+        if (targetEnemy != null)
+        {
+            dmg = targetEnemy.CalculateFinalTakenDamage(dmg);
+        }
+
+        return dmg;
+    }
+
     public Sprite GetBuiltInSprite(ECardColor color)
     {
         switch (color)
@@ -765,7 +789,7 @@ public class Card : MonoBehaviour,
             if (SplineTargetingArrow.Ins != null)
             {
                 Vector2 arrowStartCanvasPos = HandManager.Ins.GetCardTopCenterCanvasLocalPos(rectTransform);
-                SplineTargetingArrow.Ins.UpdateTargetingArrow(arrowStartCanvasPos, eventData.position);
+                SplineTargetingArrow.Ins.UpdateTargetingArrow(arrowStartCanvasPos, eventData.position, this);
             }
         }
         else

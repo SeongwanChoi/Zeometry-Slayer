@@ -28,8 +28,6 @@ public class DeckViewerModalUI : Singleton<DeckViewerModalUI>
 
     [Header("2. DrawPile / DiscardPile 클릭 전용 전체 화면 카드 나열 뷰어 (첨부 이미지 스타일)")]
     [SerializeField] private RectTransform pileViewerGroupRect;
-    [SerializeField] private Image topHeaderBarBgImage;
-    [SerializeField] private TextMeshProUGUI[] topHeaderBoxTexts = new TextMeshProUGUI[4];
     [SerializeField] private ScrollRect pileScrollRect;
     [SerializeField] private RectTransform pileGridContentRect;
     [SerializeField] private TextMeshProUGUI emptyPileNoticeText;
@@ -165,31 +163,6 @@ public class DeckViewerModalUI : Singleton<DeckViewerModalUI>
                 if (cmpPlayer != 0) return cmpPlayer;
                 return a.cardColor.CompareTo(b.cardColor);
             });
-        }
-
-        int artsCount = 0, quickCount = 0, busterCount = 0;
-        for (int i = 0; i < entries.Count; i++)
-        {
-            if (entries[i].cardColor == ECardColor.ARTS) artsCount++;
-            else if (entries[i].cardColor == ECardColor.QUICK) quickCount++;
-            else if (entries[i].cardColor.IsBusterAttribute()) busterCount++;
-        }
-
-        // 상단 헤더 바 4개 박스 텍스트 및 테마 색상 갱신 (첨부 이미지의 상단 구분 바 디자인)
-        if (topHeaderBarBgImage != null)
-        {
-            topHeaderBarBgImage.color = isDiscardPile
-                ? new Color(0.22f, 0.34f, 0.48f, 0.94f)
-                : new Color(0.32f, 0.48f, 0.18f, 0.94f);
-        }
-
-        string pileTitle = isDiscardPile ? "버린 카드 더미" : "뽑을 카드 더미 (덱)";
-        if (topHeaderBoxTexts != null && topHeaderBoxTexts.Length >= 4)
-        {
-            if (topHeaderBoxTexts[0] != null) topHeaderBoxTexts[0].text = $"{pileTitle} : {entries.Count}장";
-            if (topHeaderBoxTexts[1] != null) topHeaderBoxTexts[1].text = $"Arts : {artsCount}장";
-            if (topHeaderBoxTexts[2] != null) topHeaderBoxTexts[2].text = $"Quick : {quickCount}장";
-            if (topHeaderBoxTexts[3] != null) topHeaderBoxTexts[3].text = $"Buster : {busterCount}장";
         }
 
         if (bottomHintBannerText != null)
@@ -733,67 +706,7 @@ public class DeckViewerModalUI : Singleton<DeckViewerModalUI>
             pileViewerGroupRect = grpTr.GetComponent<RectTransform>();
         }
 
-        // (A) 상단 가로 바 & 4개의 요약 박스 (첨부 이미지 상단 연두색/청록색 바 디자인)
-        Transform topBarTr = pileViewerGroupRect.Find("TopHeaderBar");
-        if (topBarTr == null)
-        {
-            GameObject barObj = new GameObject("TopHeaderBar", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-            barObj.layer = LayerMask.NameToLayer("UI");
-            barObj.transform.SetParent(pileViewerGroupRect, false);
-
-            RectTransform barRt = barObj.GetComponent<RectTransform>();
-            UIHelper.ConfigureCenteredRect(barRt, new Vector2(0f, 380f), new Vector2(1060f, 44f));
-
-            topHeaderBarBgImage = barObj.GetComponent<Image>();
-            topHeaderBarBgImage.sprite = UIHelper.GetOrCreateSolidWhiteSprite();
-            topHeaderBarBgImage.color = new Color(0.32f, 0.48f, 0.18f, 0.94f);
-            topHeaderBarBgImage.raycastTarget = true;
-
-            float[] boxX = { -365f, -95f, 135f, 365f };
-            float[] boxW = { 290f, 200f, 200f, 200f };
-            string[] defaultLabels = { "뽑을 카드 더미 (덱) : 10장", "Arts : 4장", "Quick : 3장", "Buster : 3장" };
-
-            for (int i = 0; i < 4; i++)
-            {
-                GameObject boxObj = new GameObject($"HeaderSubBox_{i}", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-                boxObj.layer = LayerMask.NameToLayer("UI");
-                boxObj.transform.SetParent(barObj.transform, false);
-
-                RectTransform boxRt = boxObj.GetComponent<RectTransform>();
-                UIHelper.ConfigureCenteredRect(boxRt, new Vector2(boxX[i], 0f), new Vector2(boxW[i], 32f));
-
-                Image boxImg = boxObj.GetComponent<Image>();
-                boxImg.sprite = UIHelper.GetOrCreateSolidWhiteSprite();
-                boxImg.color = new Color(0.06f, 0.10f, 0.05f, 0.72f);
-                boxImg.raycastTarget = false;
-
-                topHeaderBoxTexts[i] = UIHelper.CreateOutlinedText(
-                    boxObj.transform,
-                    "Label",
-                    defaultLabels[i],
-                    17,
-                    FontStyle.Bold,
-                    new Color(0.95f, 0.97f, 0.88f, 1f),
-                    Vector2.zero,
-                    new Vector2(boxW[i] - 12f, 30f),
-                    TextAnchor.MiddleCenter,
-                    new Color(0.02f, 0.03f, 0.02f, 0.98f),
-                    new Vector2(1.4f, -1.4f)
-                );
-            }
-        }
-        else
-        {
-            topHeaderBarBgImage = topBarTr.GetComponent<Image>();
-            for (int i = 0; i < 4; i++)
-            {
-                Transform bTr = topBarTr.Find($"HeaderSubBox_{i}/Label");
-                if (bTr != null)
-                    topHeaderBoxTexts[i] = UIHelper.GetOrAddTMPText(bTr.gameObject);
-            }
-        }
-
-        // (B) 중앙 5열 카드 그리드 & ScrollRect + 우측 스크롤바 (첨부 이미지 중앙 5x2 그리드 + 우측 세로 스크롤바)
+        // (A) 중앙 5열 카드 그리드 & ScrollRect + 우측 스크롤바 (첨부 이미지 중앙 5x2 그리드 + 우측 세로 스크롤바)
         Transform scrollTr = pileViewerGroupRect.Find("PileCardScrollView");
         if (scrollTr == null)
         {
