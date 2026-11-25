@@ -293,6 +293,7 @@ public class PauseMenuManager : Singleton<PauseMenuManager>
                 overlayRt.localPosition = Vector3.zero;
 
                 Image dimImg = pauseOverlayPanel.GetComponent<Image>();
+                dimImg.sprite = UIHelper.GetOrCreateSolidWhiteSprite();
                 dimImg.color = dimOverlayColor;
                 dimImg.raycastTarget = true; // 메뉴 뒤에 있는 카드나 캐릭터가 클릭되지 않도록 차단
             }
@@ -301,7 +302,11 @@ public class PauseMenuManager : Singleton<PauseMenuManager>
         {
             Image dimImg = pauseOverlayPanel.GetComponent<Image>();
             if (dimImg != null)
+            {
+                if (dimImg.sprite == null)
+                    dimImg.sprite = UIHelper.GetOrCreateSolidWhiteSprite();
                 dimImg.color = dimOverlayColor;
+            }
         }
 
         // 2. 중앙 메뉴창(PauseMenuWindow) 찾기 또는 생성
@@ -459,6 +464,13 @@ public class PauseMenuManager : Singleton<PauseMenuManager>
         // 버튼 위치 및 클릭 이벤트 연결 보장
         if (quitGameButton != null)
         {
+            Image existingBtnImg = quitGameButton.GetComponent<Image>();
+            if (existingBtnImg != null && existingBtnImg.sprite == null)
+            {
+                existingBtnImg.sprite = GetOrCreateButtonSprite();
+                existingBtnImg.color = Color.white;
+            }
+
             UIHelper.FindOrConvertTMPText(quitGameButton.transform, "QuitButtonText");
             RectTransform btnRt = quitGameButton.GetComponent<RectTransform>();
             if (btnRt != null)
@@ -503,9 +515,17 @@ public class PauseMenuManager : Singleton<PauseMenuManager>
                 soundControlGroup = groupObj.GetComponent<RectTransform>();
 
                 Image panelBg = groupObj.GetComponent<Image>();
+                panelBg.sprite = UIHelper.GetOrCreateSolidWhiteSprite();
                 panelBg.color = new Color(0.05f, 0.11f, 0.22f, 0.72f);
                 panelBg.raycastTarget = false;
             }
+        }
+
+        if (soundControlGroup != null)
+        {
+            Image panelBg = soundControlGroup.GetComponent<Image>();
+            if (panelBg != null && panelBg.sprite == null)
+                panelBg.sprite = UIHelper.GetOrCreateSolidWhiteSprite();
         }
 
         soundControlGroup.anchorMin = new Vector2(0.5f, 0.5f);
@@ -907,111 +927,123 @@ public class PauseMenuManager : Singleton<PauseMenuManager>
     private static TMP_FontAsset GetOrCreateKoreanFont() => UIHelper.GetOrCreateTMPFont();
 
     /// <summary>
-    /// 사이버 네온 스타일의 메뉴창 배경 프레임 스프라이트를 생성합니다.
+    /// 사이버 네온 스타일의 메뉴창 배경 프레임 스프라이트를 Assets/Resource/UI/pause_menu_window.png에 저장하고 반환합니다.
     /// </summary>
     public static Sprite GetOrCreateWindowSprite()
     {
         if (cachedWindowSprite != null)
             return cachedWindowSprite;
 
-        int width = 520;
-        int height = 410;
-        Texture2D tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
-        tex.wrapMode = TextureWrapMode.Clamp;
-
-        Color[] pixels = new Color[width * height];
-        int margin = 12;
-        int chamfer = 22;
-        float borderThickness = 3.2f;
-        float glowRange = 10f;
-
-        Color bgDark = new Color(0.03f, 0.06f, 0.13f, 0.95f);
-        Color deepBlueGlow = new Color(0.02f, 0.35f, 0.90f, 1f);
-        Color neonCyanMid = new Color(0.10f, 0.68f, 1.0f, 1f);
-        Color neonCyanCore = new Color(0.65f, 0.96f, 1.0f, 1f);
-
-        for (int y = 0; y < height; y++)
-        {
-            for (int x = 0; x < width; x++)
+        cachedWindowSprite = UIHelper.GetOrSaveProceduralSprite(
+            "Assets/Resource/UI/pause_menu_window.png",
+            "pause_menu_window",
+            Vector4.zero,
+            () =>
             {
-                int dx = Mathf.Min(x - margin, (width - 1 - margin) - x);
-                int dy = Mathf.Min(y - margin, (height - 1 - margin) - y);
-                float dCorner = (dx + dy - chamfer) * 0.7071f;
-                float signedDist = Mathf.Min(Mathf.Min(dx, dy), dCorner);
+                int width = 520;
+                int height = 410;
+                Texture2D tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
+                tex.wrapMode = TextureWrapMode.Clamp;
 
-                float distBorder = Mathf.Abs(signedDist);
-                Color finalCol = Color.clear;
+                Color[] pixels = new Color[width * height];
+                int margin = 12;
+                int chamfer = 22;
+                float borderThickness = 3.2f;
+                float glowRange = 10f;
 
-                if (distBorder <= borderThickness)
+                Color bgDark = new Color(0.03f, 0.06f, 0.13f, 0.95f);
+                Color deepBlueGlow = new Color(0.02f, 0.35f, 0.90f, 1f);
+                Color neonCyanMid = new Color(0.10f, 0.68f, 1.0f, 1f);
+                Color neonCyanCore = new Color(0.65f, 0.96f, 1.0f, 1f);
+
+                for (int y = 0; y < height; y++)
                 {
-                    float t = 1f - (distBorder / borderThickness);
-                    finalCol = Color.Lerp(neonCyanMid, neonCyanCore, t * t);
-                    finalCol.a = 1f;
-                }
-                else if (signedDist > borderThickness)
-                {
-                    // 내부 어두운 배경 + 상단 헤더 구분선
-                    finalCol = bgDark;
-                    int headerLineY = height - 88;
-                    if (Mathf.Abs(y - headerLineY) <= 1 && dx > 28)
+                    for (int x = 0; x < width; x++)
                     {
-                        finalCol = Color.Lerp(bgDark, neonCyanMid, 0.45f);
+                        int dx = Mathf.Min(x - margin, (width - 1 - margin) - x);
+                        int dy = Mathf.Min(y - margin, (height - 1 - margin) - y);
+                        float dCorner = (dx + dy - chamfer) * 0.7071f;
+                        float signedDist = Mathf.Min(Mathf.Min(dx, dy), dCorner);
+
+                        float distBorder = Mathf.Abs(signedDist);
+                        Color finalCol = Color.clear;
+
+                        if (distBorder <= borderThickness)
+                        {
+                            float t = 1f - (distBorder / borderThickness);
+                            finalCol = Color.Lerp(neonCyanMid, neonCyanCore, t * t);
+                            finalCol.a = 1f;
+                        }
+                        else if (signedDist > borderThickness)
+                        {
+                            // 내부 어두운 배경 + 상단 헤더 구분선
+                            finalCol = bgDark;
+                            int headerLineY = height - 88;
+                            if (Mathf.Abs(y - headerLineY) <= 1 && dx > 28)
+                            {
+                                finalCol = Color.Lerp(bgDark, neonCyanMid, 0.45f);
+                            }
+                        }
+                        else
+                        {
+                            float outDist = -signedDist - borderThickness;
+                            if (outDist < glowRange)
+                            {
+                                float g = 1f - (outDist / glowRange);
+                                finalCol = deepBlueGlow;
+                                finalCol.a = g * g * 0.75f;
+                            }
+                        }
+
+                        pixels[y * width + x] = finalCol;
                     }
                 }
-                else
-                {
-                    float outDist = -signedDist - borderThickness;
-                    if (outDist < glowRange)
-                    {
-                        float g = 1f - (outDist / glowRange);
-                        finalCol = deepBlueGlow;
-                        finalCol.a = g * g * 0.75f;
-                    }
-                }
 
-                pixels[y * width + x] = finalCol;
+                tex.SetPixels(pixels);
+                tex.Apply();
+                return tex;
             }
-        }
-
-        tex.SetPixels(pixels);
-        tex.Apply();
-
-        cachedWindowSprite = Sprite.Create(tex, new Rect(0, 0, width, height), new Vector2(0.5f, 0.5f), 100f);
-        cachedWindowSprite.name = "pause_menu_window_runtime";
+        );
         return cachedWindowSprite;
     }
 
     /// <summary>
-    /// 사이버 네온 시안 스타일의 보조 컨트롤 버튼(- / + / 음소거) 스프라이트를 생성합니다.
+    /// 사이버 네온 시안 스타일의 보조 컨트롤 버튼(- / + / 음소거) 스프라이트를 Assets/Resource/UI/btn_sound_sub.png에 저장하고 반환합니다.
     /// </summary>
     private static Sprite GetOrCreateSubButtonSprite()
     {
         if (cachedSubButtonSprite != null)
             return cachedSubButtonSprite;
 
-        int width = 96;
-        int height = 40;
-        Texture2D tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
-        tex.wrapMode = TextureWrapMode.Clamp;
-
-        Color[] pixels = new Color[width * height];
-        Color bgCol = new Color(0.06f, 0.16f, 0.30f, 0.95f);
-        Color borderCol = new Color(0.25f, 0.82f, 1.0f, 1f);
-
-        for (int y = 0; y < height; y++)
-        {
-            for (int x = 0; x < width; x++)
+        cachedSubButtonSprite = UIHelper.GetOrSaveProceduralSprite(
+            "Assets/Resource/UI/btn_sound_sub.png",
+            "btn_sound_sub",
+            Vector4.zero,
+            () =>
             {
-                bool isBorder = x < 2 || x >= width - 2 || y < 2 || y >= height - 2;
-                pixels[y * width + x] = isBorder ? borderCol : bgCol;
+                int width = 96;
+                int height = 40;
+                Texture2D tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
+                tex.wrapMode = TextureWrapMode.Clamp;
+
+                Color[] pixels = new Color[width * height];
+                Color bgCol = new Color(0.06f, 0.16f, 0.30f, 0.95f);
+                Color borderCol = new Color(0.25f, 0.82f, 1.0f, 1f);
+
+                for (int y = 0; y < height; y++)
+                {
+                    for (int x = 0; x < width; x++)
+                    {
+                        bool isBorder = x < 2 || x >= width - 2 || y < 2 || y >= height - 2;
+                        pixels[y * width + x] = isBorder ? borderCol : bgCol;
+                    }
+                }
+
+                tex.SetPixels(pixels);
+                tex.Apply();
+                return tex;
             }
-        }
-
-        tex.SetPixels(pixels);
-        tex.Apply();
-
-        cachedSubButtonSprite = Sprite.Create(tex, new Rect(0, 0, width, height), new Vector2(0.5f, 0.5f), 100f);
-        cachedSubButtonSprite.name = "btn_sound_sub_runtime";
+        );
         return cachedSubButtonSprite;
     }
 
@@ -1020,29 +1052,35 @@ public class PauseMenuManager : Singleton<PauseMenuManager>
         if (cachedSliderTrackSprite != null)
             return cachedSliderTrackSprite;
 
-        int width = 64;
-        int height = 16;
-        Texture2D tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
-        tex.wrapMode = TextureWrapMode.Clamp;
-
-        Color[] pixels = new Color[width * height];
-        Color bgCol = new Color(0.02f, 0.05f, 0.11f, 0.96f);
-        Color borderCol = new Color(0.18f, 0.52f, 0.78f, 0.9f);
-
-        for (int y = 0; y < height; y++)
-        {
-            for (int x = 0; x < width; x++)
+        cachedSliderTrackSprite = UIHelper.GetOrSaveProceduralSprite(
+            "Assets/Resource/UI/slider_track.png",
+            "slider_track",
+            Vector4.zero,
+            () =>
             {
-                bool isBorder = x < 2 || x >= width - 2 || y < 2 || y >= height - 2;
-                pixels[y * width + x] = isBorder ? borderCol : bgCol;
+                int width = 64;
+                int height = 16;
+                Texture2D tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
+                tex.wrapMode = TextureWrapMode.Clamp;
+
+                Color[] pixels = new Color[width * height];
+                Color bgCol = new Color(0.02f, 0.05f, 0.11f, 0.96f);
+                Color borderCol = new Color(0.18f, 0.52f, 0.78f, 0.9f);
+
+                for (int y = 0; y < height; y++)
+                {
+                    for (int x = 0; x < width; x++)
+                    {
+                        bool isBorder = x < 2 || x >= width - 2 || y < 2 || y >= height - 2;
+                        pixels[y * width + x] = isBorder ? borderCol : bgCol;
+                    }
+                }
+
+                tex.SetPixels(pixels);
+                tex.Apply();
+                return tex;
             }
-        }
-
-        tex.SetPixels(pixels);
-        tex.Apply();
-
-        cachedSliderTrackSprite = Sprite.Create(tex, new Rect(0, 0, width, height), new Vector2(0.5f, 0.5f), 100f);
-        cachedSliderTrackSprite.name = "slider_track_runtime";
+        );
         return cachedSliderTrackSprite;
     }
 
@@ -1051,30 +1089,36 @@ public class PauseMenuManager : Singleton<PauseMenuManager>
         if (cachedSliderFillSprite != null)
             return cachedSliderFillSprite;
 
-        int width = 64;
-        int height = 12;
-        Texture2D tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
-        tex.wrapMode = TextureWrapMode.Clamp;
-
-        Color[] pixels = new Color[width * height];
-        Color bottomCyan = new Color(0.10f, 0.68f, 0.98f, 1f);
-        Color topCyan = new Color(0.55f, 0.96f, 1.0f, 1f);
-
-        for (int y = 0; y < height; y++)
-        {
-            float t = (float)y / Mathf.Max(1, height - 1);
-            Color rowCol = Color.Lerp(bottomCyan, topCyan, t);
-            for (int x = 0; x < width; x++)
+        cachedSliderFillSprite = UIHelper.GetOrSaveProceduralSprite(
+            "Assets/Resource/UI/slider_fill.png",
+            "slider_fill",
+            Vector4.zero,
+            () =>
             {
-                pixels[y * width + x] = rowCol;
+                int width = 64;
+                int height = 12;
+                Texture2D tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
+                tex.wrapMode = TextureWrapMode.Clamp;
+
+                Color[] pixels = new Color[width * height];
+                Color bottomCyan = new Color(0.10f, 0.68f, 0.98f, 1f);
+                Color topCyan = new Color(0.55f, 0.96f, 1.0f, 1f);
+
+                for (int y = 0; y < height; y++)
+                {
+                    float t = (float)y / Mathf.Max(1, height - 1);
+                    Color rowCol = Color.Lerp(bottomCyan, topCyan, t);
+                    for (int x = 0; x < width; x++)
+                    {
+                        pixels[y * width + x] = rowCol;
+                    }
+                }
+
+                tex.SetPixels(pixels);
+                tex.Apply();
+                return tex;
             }
-        }
-
-        tex.SetPixels(pixels);
-        tex.Apply();
-
-        cachedSliderFillSprite = Sprite.Create(tex, new Rect(0, 0, width, height), new Vector2(0.5f, 0.5f), 100f);
-        cachedSliderFillSprite.name = "slider_fill_runtime";
+        );
         return cachedSliderFillSprite;
     }
 
@@ -1083,98 +1127,110 @@ public class PauseMenuManager : Singleton<PauseMenuManager>
         if (cachedSliderHandleSprite != null)
             return cachedSliderHandleSprite;
 
-        int width = 20;
-        int height = 28;
-        Texture2D tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
-        tex.wrapMode = TextureWrapMode.Clamp;
-
-        Color[] pixels = new Color[width * height];
-        Color coreCol = new Color(0.88f, 0.98f, 1.0f, 1f);
-        Color borderCol = new Color(0.15f, 0.78f, 1.0f, 1f);
-
-        for (int y = 0; y < height; y++)
-        {
-            for (int x = 0; x < width; x++)
+        cachedSliderHandleSprite = UIHelper.GetOrSaveProceduralSprite(
+            "Assets/Resource/UI/slider_handle.png",
+            "slider_handle",
+            Vector4.zero,
+            () =>
             {
-                bool isBorder = x < 2 || x >= width - 2 || y < 2 || y >= height - 2;
-                pixels[y * width + x] = isBorder ? borderCol : coreCol;
+                int width = 20;
+                int height = 28;
+                Texture2D tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
+                tex.wrapMode = TextureWrapMode.Clamp;
+
+                Color[] pixels = new Color[width * height];
+                Color coreCol = new Color(0.88f, 0.98f, 1.0f, 1f);
+                Color borderCol = new Color(0.15f, 0.78f, 1.0f, 1f);
+
+                for (int y = 0; y < height; y++)
+                {
+                    for (int x = 0; x < width; x++)
+                    {
+                        bool isBorder = x < 2 || x >= width - 2 || y < 2 || y >= height - 2;
+                        pixels[y * width + x] = isBorder ? borderCol : coreCol;
+                    }
+                }
+
+                tex.SetPixels(pixels);
+                tex.Apply();
+                return tex;
             }
-        }
-
-        tex.SetPixels(pixels);
-        tex.Apply();
-
-        cachedSliderHandleSprite = Sprite.Create(tex, new Rect(0, 0, width, height), new Vector2(0.5f, 0.5f), 100f);
-        cachedSliderHandleSprite.name = "slider_handle_runtime";
+        );
         return cachedSliderHandleSprite;
     }
 
     /// <summary>
-    /// 사이버 네온 레드 스타일의 [게임 종료] 버튼 배경 스프라이트를 생성합니다.
+    /// 사이버 네온 레드 스타일의 [게임 종료] 버튼 배경 스프라이트를 Assets/Resource/UI/btn_quit_game.png에 저장하고 반환합니다.
     /// </summary>
     public static Sprite GetOrCreateButtonSprite()
     {
         if (cachedButtonSprite != null)
             return cachedButtonSprite;
 
-        int width = 260;
-        int height = 72;
-        Texture2D tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
-        tex.wrapMode = TextureWrapMode.Clamp;
-
-        Color[] pixels = new Color[width * height];
-        int margin = 8;
-        int chamfer = 12;
-        float borderThickness = 2.6f;
-        float glowRange = 7f;
-
-        Color btnBg = new Color(0.18f, 0.03f, 0.07f, 0.94f);
-        Color redGlow = new Color(0.85f, 0.05f, 0.22f, 1f);
-        Color neonRedMid = new Color(1.0f, 0.18f, 0.35f, 1f);
-        Color neonRedCore = new Color(1.0f, 0.72f, 0.80f, 1f);
-
-        for (int y = 0; y < height; y++)
-        {
-            for (int x = 0; x < width; x++)
+        cachedButtonSprite = UIHelper.GetOrSaveProceduralSprite(
+            "Assets/Resource/UI/btn_quit_game.png",
+            "btn_quit_game",
+            Vector4.zero,
+            () =>
             {
-                int dx = Mathf.Min(x - margin, (width - 1 - margin) - x);
-                int dy = Mathf.Min(y - margin, (height - 1 - margin) - y);
-                float dCorner = (dx + dy - chamfer) * 0.7071f;
-                float signedDist = Mathf.Min(Mathf.Min(dx, dy), dCorner);
+                int width = 260;
+                int height = 72;
+                Texture2D tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
+                tex.wrapMode = TextureWrapMode.Clamp;
 
-                float distBorder = Mathf.Abs(signedDist);
-                Color finalCol = Color.clear;
+                Color[] pixels = new Color[width * height];
+                int margin = 8;
+                int chamfer = 12;
+                float borderThickness = 2.6f;
+                float glowRange = 7f;
 
-                if (distBorder <= borderThickness)
+                Color btnBg = new Color(0.18f, 0.03f, 0.07f, 0.94f);
+                Color redGlow = new Color(0.85f, 0.05f, 0.22f, 1f);
+                Color neonRedMid = new Color(1.0f, 0.18f, 0.35f, 1f);
+                Color neonRedCore = new Color(1.0f, 0.72f, 0.80f, 1f);
+
+                for (int y = 0; y < height; y++)
                 {
-                    float t = 1f - (distBorder / borderThickness);
-                    finalCol = Color.Lerp(neonRedMid, neonRedCore, t * t);
-                    finalCol.a = 1f;
-                }
-                else if (signedDist > borderThickness)
-                {
-                    finalCol = btnBg;
-                }
-                else
-                {
-                    float outDist = -signedDist - borderThickness;
-                    if (outDist < glowRange)
+                    for (int x = 0; x < width; x++)
                     {
-                        float g = 1f - (outDist / glowRange);
-                        finalCol = redGlow;
-                        finalCol.a = g * g * 0.7f;
+                        int dx = Mathf.Min(x - margin, (width - 1 - margin) - x);
+                        int dy = Mathf.Min(y - margin, (height - 1 - margin) - y);
+                        float dCorner = (dx + dy - chamfer) * 0.7071f;
+                        float signedDist = Mathf.Min(Mathf.Min(dx, dy), dCorner);
+
+                        float distBorder = Mathf.Abs(signedDist);
+                        Color finalCol = Color.clear;
+
+                        if (distBorder <= borderThickness)
+                        {
+                            float t = 1f - (distBorder / borderThickness);
+                            finalCol = Color.Lerp(neonRedMid, neonRedCore, t * t);
+                            finalCol.a = 1f;
+                        }
+                        else if (signedDist > borderThickness)
+                        {
+                            finalCol = btnBg;
+                        }
+                        else
+                        {
+                            float outDist = -signedDist - borderThickness;
+                            if (outDist < glowRange)
+                            {
+                                float g = 1f - (outDist / glowRange);
+                                finalCol = redGlow;
+                                finalCol.a = g * g * 0.7f;
+                            }
+                        }
+
+                        pixels[y * width + x] = finalCol;
                     }
                 }
 
-                pixels[y * width + x] = finalCol;
+                tex.SetPixels(pixels);
+                tex.Apply();
+                return tex;
             }
-        }
-
-        tex.SetPixels(pixels);
-        tex.Apply();
-
-        cachedButtonSprite = Sprite.Create(tex, new Rect(0, 0, width, height), new Vector2(0.5f, 0.5f), 100f);
-        cachedButtonSprite.name = "btn_quit_game_runtime";
+        );
         return cachedButtonSprite;
     }
 }

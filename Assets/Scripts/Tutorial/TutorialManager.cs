@@ -631,8 +631,6 @@ public class TutorialManager : MonoBehaviour
         outlineImg.color = new Color(0.28f, 0.42f, 0.75f, 0.85f);
         outlineImg.raycastTarget = false;
 
-        Font font = GetBestFont();
-
         TMP_FontAsset tmpFont = UIHelper.GetOrCreateTMPFont();
 
         GameObject badgeObj = new GameObject("StepBadge", typeof(RectTransform), typeof(Image));
@@ -1304,66 +1302,78 @@ public class TutorialManager : MonoBehaviour
 
     #region Helper Texture & Font Utilities
 
-    private static Font GetBestFont() => UIHelper.GetOrCreateFont();
-
     private static Sprite CreateRoundedRectSprite(int radius = 16)
     {
-        int size = radius * 4;
-        Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
-        tex.filterMode = FilterMode.Bilinear;
-
-        Color transparent = new Color(1f, 1f, 1f, 0f);
-        Color solid = Color.white;
-
-        for (int y = 0; y < size; y++)
-        {
-            for (int x = 0; x < size; x++)
-            {
-                int cornerX = (x < radius) ? radius - x : ((x >= size - radius) ? x - (size - radius - 1) : 0);
-                int cornerY = (y < radius) ? radius - y : ((y >= size - radius) ? y - (size - radius - 1) : 0);
-
-                if (cornerX > 0 && cornerY > 0)
-                {
-                    float dist = Mathf.Sqrt((cornerX * cornerX) + (cornerY * cornerY));
-                    if (dist > radius)
-                        tex.SetPixel(x, y, transparent);
-                    else
-                        tex.SetPixel(x, y, solid);
-                }
-                else
-                {
-                    tex.SetPixel(x, y, solid);
-                }
-            }
-        }
-        tex.Apply();
-
         Vector4 border = new Vector4(radius, radius, radius, radius);
-        return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, border);
+        return UIHelper.GetOrSaveProceduralSprite(
+            $"Assets/Resource/UI/ui_tutorial_rounded_r{radius}.png",
+            $"ui_tutorial_rounded_r{radius}",
+            border,
+            () =>
+            {
+                int size = radius * 4;
+                Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+                tex.filterMode = FilterMode.Bilinear;
+
+                Color transparent = new Color(1f, 1f, 1f, 0f);
+                Color solid = Color.white;
+
+                for (int y = 0; y < size; y++)
+                {
+                    for (int x = 0; x < size; x++)
+                    {
+                        int cornerX = (x < radius) ? radius - x : ((x >= size - radius) ? x - (size - radius - 1) : 0);
+                        int cornerY = (y < radius) ? radius - y : ((y >= size - radius) ? y - (size - radius - 1) : 0);
+
+                        if (cornerX > 0 && cornerY > 0)
+                        {
+                            float dist = Mathf.Sqrt((cornerX * cornerX) + (cornerY * cornerY));
+                            if (dist > radius)
+                                tex.SetPixel(x, y, transparent);
+                            else
+                                tex.SetPixel(x, y, solid);
+                        }
+                        else
+                        {
+                            tex.SetPixel(x, y, solid);
+                        }
+                    }
+                }
+                tex.Apply();
+                return tex;
+            }
+        );
     }
 
     private static Sprite CreateBorderSprite()
     {
         int size = 32;
         int borderW = 4;
-        Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
-        tex.filterMode = FilterMode.Point;
-
-        Color borderCol = Color.white;
-        Color empty = new Color(1f, 1f, 1f, 0f);
-
-        for (int y = 0; y < size; y++)
-        {
-            for (int x = 0; x < size; x++)
-            {
-                bool isBorder = (x < borderW || x >= size - borderW || y < borderW || y >= size - borderW);
-                tex.SetPixel(x, y, isBorder ? borderCol : empty);
-            }
-        }
-        tex.Apply();
-
         Vector4 border = new Vector4(borderW + 2, borderW + 2, borderW + 2, borderW + 2);
-        return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, border);
+        return UIHelper.GetOrSaveProceduralSprite(
+            "Assets/Resource/UI/ui_tutorial_spotlight_border.png",
+            "ui_tutorial_spotlight_border",
+            border,
+            () =>
+            {
+                Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+                tex.filterMode = FilterMode.Point;
+
+                Color borderCol = Color.white;
+                Color empty = new Color(1f, 1f, 1f, 0f);
+
+                for (int y = 0; y < size; y++)
+                {
+                    for (int x = 0; x < size; x++)
+                    {
+                        bool isBorder = (x < borderW || x >= size - borderW || y < borderW || y >= size - borderW);
+                        tex.SetPixel(x, y, isBorder ? borderCol : empty);
+                    }
+                }
+                tex.Apply();
+                return tex;
+            }
+        );
     }
 
     #endregion

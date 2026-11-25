@@ -7,7 +7,6 @@ using UnityEngine.UI;
 /// 체력바 아래에 표시되는 버프 아이콘(적의 FeatherBuffSingle 및 플레이어의 스킬 버프 3종) +
 /// 각 버프 이미지의 우측 하단에 표시되는 중첩 수치를 관리합니다.
 /// </summary>
-[ExecuteAlways]
 public class UnitStatusUI : MonoBehaviour
 {
     [Header("연결된 대상 유닛")]
@@ -73,7 +72,6 @@ public class UnitStatusUI : MonoBehaviour
             critBuffSprite = critSkillSprite;
 
         EnsureUIHierarchy();
-        UpdatePosition();
         RefreshStatus(targetUnit.CurrentHp, targetUnit.MaxHp, targetUnit.BuffCount);
     }
 
@@ -91,7 +89,6 @@ public class UnitStatusUI : MonoBehaviour
             return;
         }
 
-        UpdatePosition();
         EnforceBuffContainerLeftZero();
     }
 
@@ -432,6 +429,9 @@ public class UnitStatusUI : MonoBehaviour
         else
         {
             bgRect = bgTr.GetComponent<RectTransform>();
+            Image bgImg = bgRect.GetComponent<Image>();
+            if (bgImg != null && bgImg.sprite == null)
+                bgImg.sprite = GetOrCreateSolidWhiteSprite();
         }
 
         // 2. 체력바 내부 패딩 영역 (HPFillArea) 및 빨간색 게이지 (HPFill)
@@ -485,6 +485,8 @@ public class UnitStatusUI : MonoBehaviour
                 hpFillImage = fillTr.GetComponent<Image>();
             }
         }
+        if (hpFillImage != null && hpFillImage.sprite == null)
+            hpFillImage.sprite = GetOrCreateSolidWhiteSprite();
 
         // 2-1. 타겟팅 시 오른쪽에서부터 줄어들 체력을 미리 보여주는 짙은 붉은색 프리뷰 게이지 (HPDamagePreviewFill)
         if (hpDamagePreviewRect == null || hpDamagePreviewImage == null)
@@ -518,6 +520,8 @@ public class UnitStatusUI : MonoBehaviour
                 hpDamagePreviewImage = prevTr.GetComponent<Image>();
             }
         }
+        if (hpDamagePreviewImage != null && hpDamagePreviewImage.sprite == null)
+            hpDamagePreviewImage.sprite = GetOrCreateSolidWhiteSprite();
 
         // 3. 체력 수치 텍스트 (예: 250/250, 50/50) - 항상 HP바 정중앙 정렬 보장
         if (hpValueText == null)
@@ -779,9 +783,12 @@ public class UnitStatusUI : MonoBehaviour
     {
         if (cachedFeatherSprite != null) return cachedFeatherSprite;
 
-        Texture2D tex = CreateFeatherTexture(64, 64);
-        cachedFeatherSprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f);
-        cachedFeatherSprite.name = "icon_buff_feather";
+        cachedFeatherSprite = UIHelper.GetOrSaveProceduralSprite(
+            "Assets/Resource/UI/icon_buff_feather.png",
+            "icon_buff_feather",
+            Vector4.zero,
+            () => CreateFeatherTexture(64, 64)
+        );
         return cachedFeatherSprite;
     }
 

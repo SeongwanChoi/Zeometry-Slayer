@@ -1040,7 +1040,11 @@ public class HandManager : Singleton<HandManager>
         {
             Image dpImg = drawPileRoot.GetComponent<Image>();
             if (dpImg != null)
+            {
+                if (dpImg.sprite == null)
+                    dpImg.sprite = GetOrCreateDeckPileSprite(false);
                 dpImg.raycastTarget = true;
+            }
 
             Button dpBtn = drawPileRoot.GetComponent<Button>();
             if (dpBtn == null)
@@ -1091,7 +1095,11 @@ public class HandManager : Singleton<HandManager>
         {
             Image dcpImg = discardPileRoot.GetComponent<Image>();
             if (dcpImg != null)
+            {
+                if (dcpImg.sprite == null)
+                    dcpImg.sprite = GetOrCreateDeckPileSprite(true);
                 dcpImg.raycastTarget = true;
+            }
 
             Button dcpBtn = discardPileRoot.GetComponent<Button>();
             if (dcpBtn == null)
@@ -1159,11 +1167,20 @@ public class HandManager : Singleton<HandManager>
 
         if (turnEndButton != null)
         {
+            Image btnImg = turnEndButton.GetComponent<Image>();
+            if (btnImg != null && btnImg.sprite == null)
+                btnImg.sprite = GetOrCreateTurnEndButtonSprite();
+
             UIHelper.FindOrConvertTMPText(turnEndButton.transform, "TurnEndLabel");
             turnEndButton.onClick.RemoveAllListeners();
             turnEndButton.onClick.AddListener(OnTurnEndButtonClicked);
             UIHelper.EnsureHoverScale(turnEndButton.gameObject, 1.12f);
         }
+
+        if (drawPileRoot != null)
+            EnsurePileBadgeText(drawPileRoot, "DrawCountBadge", new Vector2(68f, 18f), new Color(0.88f, 0.25f, 0.22f, 1f));
+        if (discardPileRoot != null)
+            EnsurePileBadgeText(discardPileRoot, "DiscardCountBadge", new Vector2(-68f, 18f), new Color(0.75f, 0.22f, 0.35f, 1f), true);
 
         RefreshPileCountUI();
     }
@@ -1208,6 +1225,10 @@ public class HandManager : Singleton<HandManager>
         Transform existing = pileRoot.Find(badgeName);
         if (existing != null)
         {
+            Image bImg = existing.GetComponent<Image>();
+            if (bImg != null && bImg.sprite == null)
+                bImg.sprite = GetOrCreateCountBadgeSprite();
+
             Transform txtTr = existing.Find("CountText");
             if (txtTr != null) return UIHelper.GetOrAddTMPText(txtTr.gameObject);
         }
@@ -1299,66 +1320,76 @@ public class HandManager : Singleton<HandManager>
     }
 
     // =========================================================================
-    // 슬더스2 스타일 덱/버린카드/턴종료 텍스처 생성기
+    // 슬더스2 스타일 덱/버린카드/턴종료 텍스처 생성기 (Assets/Resource/UI 폴더에 영구 저장)
     // =========================================================================
     private static Sprite GetOrCreateDeckPileSprite(bool isDiscard)
     {
         if (!isDiscard && cachedDeckPileSprite != null) return cachedDeckPileSprite;
         if (isDiscard && cachedDiscardPileSprite != null) return cachedDiscardPileSprite;
 
-        int w = 88;
-        int h = 96;
-        Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
-        tex.wrapMode = TextureWrapMode.Clamp;
-        Color[] pixels = new Color[w * h];
+        string assetPath = isDiscard ? "Assets/Resource/UI/ui_discard_pile.png" : "Assets/Resource/UI/ui_draw_pile.png";
+        string spriteName = isDiscard ? "ui_discard_pile" : "ui_draw_pile";
 
-        Color cardBackMain = isDiscard
-            ? new Color(0.24f, 0.30f, 0.42f, 0.96f)
-            : new Color(0.58f, 0.36f, 0.24f, 0.96f);
-        Color cardRim = isDiscard
-            ? new Color(0.48f, 0.72f, 0.95f, 0.98f)
-            : new Color(0.92f, 0.76f, 0.52f, 0.98f);
-        Color darkOutline = new Color(0.06f, 0.07f, 0.12f, 0.98f);
-
-        // 겹쳐진 3장의 카드 더미 렌더링
-        for (int layer = 0; layer < 3; layer++)
-        {
-            float cx = w * 0.5f + (layer - 1) * (isDiscard ? -6f : 6f);
-            float cy = h * 0.5f + (layer - 1) * 4f;
-            float angle = (layer - 1) * (isDiscard ? 9f : -9f) * Mathf.Deg2Rad;
-            float cos = Mathf.Cos(angle);
-            float sin = Mathf.Sin(angle);
-            float halfW = 24f;
-            float halfH = 33f;
-
-            for (int y = 0; y < h; y++)
+        Sprite sp = UIHelper.GetOrSaveProceduralSprite(
+            assetPath,
+            spriteName,
+            Vector4.zero,
+            () =>
             {
-                for (int x = 0; x < w; x++)
-                {
-                    float dx = x - cx;
-                    float dy = y - cy;
-                    float rx = Mathf.Abs(dx * cos + dy * sin);
-                    float ry = Mathf.Abs(-dx * sin + dy * cos);
+                int w = 88;
+                int h = 96;
+                Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+                tex.wrapMode = TextureWrapMode.Clamp;
+                Color[] pixels = new Color[w * h];
 
-                    if (rx <= halfW && ry <= halfH)
+                Color cardBackMain = isDiscard
+                    ? new Color(0.24f, 0.30f, 0.42f, 0.96f)
+                    : new Color(0.58f, 0.36f, 0.24f, 0.96f);
+                Color cardRim = isDiscard
+                    ? new Color(0.48f, 0.72f, 0.95f, 0.98f)
+                    : new Color(0.92f, 0.76f, 0.52f, 0.98f);
+                Color darkOutline = new Color(0.06f, 0.07f, 0.12f, 0.98f);
+
+                // 겹쳐진 3장의 카드 더미 렌더링
+                for (int layer = 0; layer < 3; layer++)
+                {
+                    float cx = w * 0.5f + (layer - 1) * (isDiscard ? -6f : 6f);
+                    float cy = h * 0.5f + (layer - 1) * 4f;
+                    float angle = (layer - 1) * (isDiscard ? 9f : -9f) * Mathf.Deg2Rad;
+                    float cos = Mathf.Cos(angle);
+                    float sin = Mathf.Sin(angle);
+                    float halfW = 24f;
+                    float halfH = 33f;
+
+                    for (int y = 0; y < h; y++)
                     {
-                        float edge = Mathf.Min(halfW - rx, halfH - ry);
-                        if (edge < 2.2f)
-                            pixels[y * w + x] = darkOutline;
-                        else if (edge < 5.0f)
-                            pixels[y * w + x] = cardRim;
-                        else
-                            pixels[y * w + x] = cardBackMain;
+                        for (int x = 0; x < w; x++)
+                        {
+                            float dx = x - cx;
+                            float dy = y - cy;
+                            float rx = Mathf.Abs(dx * cos + dy * sin);
+                            float ry = Mathf.Abs(-dx * sin + dy * cos);
+
+                            if (rx <= halfW && ry <= halfH)
+                            {
+                                float edge = Mathf.Min(halfW - rx, halfH - ry);
+                                if (edge < 2.2f)
+                                    pixels[y * w + x] = darkOutline;
+                                else if (edge < 5.0f)
+                                    pixels[y * w + x] = cardRim;
+                                else
+                                    pixels[y * w + x] = cardBackMain;
+                            }
+                        }
                     }
                 }
+
+                tex.SetPixels(pixels);
+                tex.Apply();
+                return tex;
             }
-        }
+        );
 
-        tex.SetPixels(pixels);
-        tex.Apply();
-
-        Sprite sp = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 100f);
-        sp.name = isDiscard ? "ui_discard_pile" : "ui_draw_pile";
         if (isDiscard) cachedDiscardPileSprite = sp;
         else cachedDeckPileSprite = sp;
         return sp;
@@ -1368,38 +1399,44 @@ public class HandManager : Singleton<HandManager>
     {
         if (cachedCountBadgeSprite != null) return cachedCountBadgeSprite;
 
-        int size = 48;
-        Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
-        tex.wrapMode = TextureWrapMode.Clamp;
-        Color[] pixels = new Color[size * size];
-
-        float half = (size - 1) * 0.5f;
-        for (int y = 0; y < size; y++)
-        {
-            for (int x = 0; x < size; x++)
+        cachedCountBadgeSprite = UIHelper.GetOrSaveProceduralSprite(
+            "Assets/Resource/UI/ui_pile_count_badge.png",
+            "ui_pile_count_badge",
+            Vector4.zero,
+            () =>
             {
-                float dist = Vector2.Distance(new Vector2(x, y), new Vector2(half, half));
-                if (dist <= half)
+                int size = 48;
+                Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+                tex.wrapMode = TextureWrapMode.Clamp;
+                Color[] pixels = new Color[size * size];
+
+                float half = (size - 1) * 0.5f;
+                for (int y = 0; y < size; y++)
                 {
-                    float edge = half - dist;
-                    float alpha = Mathf.Clamp01(edge / 1.5f);
-                    if (edge < 3.0f)
-                        pixels[y * size + x] = new Color(0.15f, 0.12f, 0.10f, alpha);
-                    else
-                        pixels[y * size + x] = new Color(1f, 1f, 1f, alpha);
+                    for (int x = 0; x < size; x++)
+                    {
+                        float dist = Vector2.Distance(new Vector2(x, y), new Vector2(half, half));
+                        if (dist <= half)
+                        {
+                            float edge = half - dist;
+                            float alpha = Mathf.Clamp01(edge / 1.5f);
+                            if (edge < 3.0f)
+                                pixels[y * size + x] = new Color(0.15f, 0.12f, 0.10f, alpha);
+                            else
+                                pixels[y * size + x] = new Color(1f, 1f, 1f, alpha);
+                        }
+                        else
+                        {
+                            pixels[y * size + x] = Color.clear;
+                        }
+                    }
                 }
-                else
-                {
-                    pixels[y * size + x] = Color.clear;
-                }
+
+                tex.SetPixels(pixels);
+                tex.Apply();
+                return tex;
             }
-        }
-
-        tex.SetPixels(pixels);
-        tex.Apply();
-
-        cachedCountBadgeSprite = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f);
-        cachedCountBadgeSprite.name = "ui_pile_count_badge";
+        );
         return cachedCountBadgeSprite;
     }
 
@@ -1407,47 +1444,53 @@ public class HandManager : Singleton<HandManager>
     {
         if (cachedTurnEndBtnSprite != null) return cachedTurnEndBtnSprite;
 
-        int w = 180;
-        int h = 64;
-        Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
-        tex.wrapMode = TextureWrapMode.Clamp;
-        Color[] pixels = new Color[w * h];
-
-        Color rimGold = new Color(0.75f, 0.68f, 0.52f, 0.98f);
-        Color innerTop = new Color(0.16f, 0.30f, 0.46f, 0.96f);
-        Color innerBot = new Color(0.08f, 0.16f, 0.28f, 0.98f);
-
-        int chamfer = 14;
-        for (int y = 0; y < h; y++)
-        {
-            float ty = (float)y / (h - 1);
-            Color bodyCol = Color.Lerp(innerBot, innerTop, ty);
-            for (int x = 0; x < w; x++)
+        cachedTurnEndBtnSprite = UIHelper.GetOrSaveProceduralSprite(
+            "Assets/Resource/UI/ui_sts2_turn_end_btn.png",
+            "ui_sts2_turn_end_btn",
+            new Vector4(18, 18, 18, 18),
+            () =>
             {
-                int dx = Mathf.Min(x, w - 1 - x);
-                int dy = Mathf.Min(y, h - 1 - y);
-                int corner = dx + dy - chamfer;
-                int dist = Mathf.Min(Mathf.Min(dx, dy), corner);
+                int w = 180;
+                int h = 64;
+                Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+                tex.wrapMode = TextureWrapMode.Clamp;
+                Color[] pixels = new Color[w * h];
 
-                if (dist >= 0)
+                Color rimGold = new Color(0.75f, 0.68f, 0.52f, 0.98f);
+                Color innerTop = new Color(0.16f, 0.30f, 0.46f, 0.96f);
+                Color innerBot = new Color(0.08f, 0.16f, 0.28f, 0.98f);
+
+                int chamfer = 14;
+                for (int y = 0; y < h; y++)
                 {
-                    if (dist < 3)
-                        pixels[y * w + x] = rimGold;
-                    else
-                        pixels[y * w + x] = bodyCol;
+                    float ty = (float)y / (h - 1);
+                    Color bodyCol = Color.Lerp(innerBot, innerTop, ty);
+                    for (int x = 0; x < w; x++)
+                    {
+                        int dx = Mathf.Min(x, w - 1 - x);
+                        int dy = Mathf.Min(y, h - 1 - y);
+                        int corner = dx + dy - chamfer;
+                        int dist = Mathf.Min(Mathf.Min(dx, dy), corner);
+
+                        if (dist >= 0)
+                        {
+                            if (dist < 3)
+                                pixels[y * w + x] = rimGold;
+                            else
+                                pixels[y * w + x] = bodyCol;
+                        }
+                        else
+                        {
+                            pixels[y * w + x] = Color.clear;
+                        }
+                    }
                 }
-                else
-                {
-                    pixels[y * w + x] = Color.clear;
-                }
+
+                tex.SetPixels(pixels);
+                tex.Apply();
+                return tex;
             }
-        }
-
-        tex.SetPixels(pixels);
-        tex.Apply();
-
-        cachedTurnEndBtnSprite = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, new Vector4(18, 18, 18, 18));
-        cachedTurnEndBtnSprite.name = "ui_sts2_turn_end_btn";
+        );
         return cachedTurnEndBtnSprite;
     }
 }

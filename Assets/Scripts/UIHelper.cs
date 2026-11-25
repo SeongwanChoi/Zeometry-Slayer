@@ -6,107 +6,41 @@ using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 /// <summary>
-/// 프로젝트 전반에서 공통으로 사용되는 UI 생성(TextMeshProUGUI 기반), 한글 TMP 폰트 로드, 스프라이트 로드,
+/// 프로젝트 전반에서 공통으로 사용되는 UI 생성(TextMeshProUGUI 기반), LevelUp-Bold SDF 폰트 로드, 스프라이트 로드,
 /// 월드-캔버스 직교 좌표 변환 및 수치 포맷팅 유틸리티 클래스입니다.
 /// </summary>
 public static class UIHelper
 {
-    private static Font cachedKoreanFont;
-    private static TMP_FontAsset cachedKoreanTMPFont;
+    private const string DefaultLevelUpBoldFontPath = "Assets/Resource/Fonts/LevelUp-TTF/LevelUp/ttf/LevelUp-Bold SDF.asset";
+
     private static Sprite cachedSolidWhiteSprite;
 
-    private static readonly string[] KoreanFontCandidates =
-    {
-        "Malgun Gothic",
-        "맑은 고딕",
-        "NanumGothic",
-        "Gulim",
-        "Arial Bold",
-        "Arial"
-    };
-
     /// <summary>
-    /// Windows/OS 한글 폰트(맑은 고딕 등)를 우선 로드하고, 실패 시 내장 폰트(LegacyRuntime.ttf)를 반환합니다.
+    /// TMP Settings에 설정된 기본 영구 TMP_FontAsset(LevelUp-Bold SDF)을 반환합니다.
+    /// 미설정 시 에디터에서는 LevelUp-Bold SDF 에셋을 직접 로드하고, 런타임 폴백으로 Resources 기본 폰트를 반환합니다.
     /// </summary>
-    public static Font GetOrCreateFont()
+    public static TMP_FontAsset GetDefaultPersistentTMPFont()
     {
-        if (cachedKoreanFont != null)
-            return cachedKoreanFont;
-
-        cachedKoreanFont = Font.CreateDynamicFontFromOSFont(KoreanFontCandidates, 28);
-
-        if (cachedKoreanFont == null)
-            cachedKoreanFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-
-        if (cachedKoreanFont == null)
-            cachedKoreanFont = Resources.GetBuiltinResource<Font>("Arial.ttf");
-
-        return cachedKoreanFont;
-    }
-
-    /// <summary>
-    /// 한글을 지원하는 동적 TMP_FontAsset(맑은 고딕 기반)을 생성/캐싱하고 TMP 기본 폰트의 Fallback에도 등록합니다.
-    /// </summary>
-    public static TMP_FontAsset GetOrCreateTMPFont()
-    {
-        if (cachedKoreanTMPFont != null)
-            return cachedKoreanTMPFont;
-
-        // 1) Unity 6 OS 폰트 패밀리 기반 동적 TMP_FontAsset 생성 시도
-        string[] familyCandidates = { "Malgun Gothic", "맑은 고딕", "NanumGothic", "Gulim", "Arial" };
-        for (int i = 0; i < familyCandidates.Length; i++)
-        {
-            try
-            {
-                cachedKoreanTMPFont = TMP_FontAsset.CreateFontAsset(familyCandidates[i], "Regular", 44);
-                if (cachedKoreanTMPFont != null)
-                    break;
-            }
-            catch
-            {
-                // 해당 OS 폰트 패밀리가 없을 경우 다음 후보 시도
-            }
-        }
-
-        // 2) 실패 시 OS Font 객체로부터 동적 TMP_FontAsset 생성
-        if (cachedKoreanTMPFont == null)
-        {
-            Font osFont = GetOrCreateFont();
-            if (osFont != null)
-            {
-                try
-                {
-                    cachedKoreanTMPFont = TMP_FontAsset.CreateFontAsset(osFont);
-                }
-                catch
-                {
-                    // 무시 후 기본 TMP 폰트 폴백
-                }
-            }
-        }
-
-        // 3) 기본 TMP Settings 폰트 로드 및 Fallback 연결
         TMP_FontAsset defaultTmpFont = TMP_Settings.defaultFontAsset;
+#if UNITY_EDITOR
+        if (defaultTmpFont == null)
+        {
+            defaultTmpFont = UnityEditor.AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(DefaultLevelUpBoldFontPath);
+        }
+#endif
         if (defaultTmpFont == null)
         {
             defaultTmpFont = Resources.Load<TMP_FontAsset>("Fonts & Materials/LiberationSans SDF");
         }
+        return defaultTmpFont;
+    }
 
-        if (cachedKoreanTMPFont != null)
-        {
-            cachedKoreanTMPFont.name = "MalgunGothic_Dynamic_TMP";
-            if (defaultTmpFont != null && defaultTmpFont != cachedKoreanTMPFont)
-            {
-                if (defaultTmpFont.fallbackFontAssetTable == null)
-                    defaultTmpFont.fallbackFontAssetTable = new List<TMP_FontAsset>();
-                if (!defaultTmpFont.fallbackFontAssetTable.Contains(cachedKoreanTMPFont))
-                    defaultTmpFont.fallbackFontAssetTable.Add(cachedKoreanTMPFont);
-            }
-            return cachedKoreanTMPFont;
-        }
-
-        cachedKoreanTMPFont = defaultTmpFont;
-        return cachedKoreanTMPFont;
+    /// <summary>
+    /// 프로젝트 기본 TMP_FontAsset(LevelUp-Bold SDF)을 반환합니다.
+    /// </summary>
+    public static TMP_FontAsset GetOrCreateTMPFont()
+    {
+        return GetDefaultPersistentTMPFont();
     }
 
     public static FontStyles ConvertFontStyle(FontStyle style)
@@ -214,24 +148,163 @@ public static class UIHelper
     }
 
     /// <summary>
-    /// 단색 배경이나 체력바 게이지 등에 공용으로 사용할 4x4 흰색 스프라이트를 생성/반환합니다.
+    /// 단색 배경이나 체력바 게이지 등에 공용으로 사용할 4x4 흰색 스프라이트를 Assets/Resource/UI/ui_solid_white.png에 저장하고 반환합니다.
     /// </summary>
     public static Sprite GetOrCreateSolidWhiteSprite()
     {
         if (cachedSolidWhiteSprite != null)
             return cachedSolidWhiteSprite;
 
-        Texture2D tex = new Texture2D(4, 4, TextureFormat.RGBA32, false);
-        Color[] cols = new Color[16];
-        for (int i = 0; i < 16; i++)
-            cols[i] = Color.white;
+        cachedSolidWhiteSprite = GetOrSaveProceduralSprite(
+            "Assets/Resource/UI/ui_solid_white.png",
+            "ui_solid_white",
+            Vector4.zero,
+            () =>
+            {
+                Texture2D tex = new Texture2D(4, 4, TextureFormat.RGBA32, false);
+                Color[] cols = new Color[16];
+                for (int i = 0; i < 16; i++)
+                    cols[i] = Color.white;
 
-        tex.SetPixels(cols);
-        tex.Apply();
+                tex.SetPixels(cols);
+                tex.Apply();
+                return tex;
+            }
+        );
 
-        cachedSolidWhiteSprite = Sprite.Create(tex, new Rect(0, 0, 4, 4), new Vector2(0.5f, 0.5f), 100f);
-        cachedSolidWhiteSprite.name = "ui_solid_white";
         return cachedSolidWhiteSprite;
+    }
+
+    /// <summary>
+    /// 코드(C#)로 생성한 프로시저럴 텍스처를 Assets/Resource/UI 폴더 내에 실제 .png 파일로 영구 저장 및 Sprite로 임포트하여 반환합니다.
+    /// (Edit Mode에서도 흰색 네모가 아닌 실제 UI 이미지가 그대로 보이고, 씬 파일에 인메모리 텍스처가 내장되지 않도록 보장합니다.)
+    /// </summary>
+    public static Sprite GetOrSaveProceduralSprite(
+        string relativeAssetPath,
+        string spriteName,
+        Vector4 border,
+        System.Func<Texture2D> textureGenerator,
+        Vector2? customPivot = null)
+    {
+        Vector2 pivot = customPivot ?? new Vector2(0.5f, 0.5f);
+
+#if UNITY_EDITOR
+        if (!string.IsNullOrEmpty(relativeAssetPath))
+        {
+            string fullPath = Path.Combine(Directory.GetCurrentDirectory(), relativeAssetPath);
+            string dirPath = Path.GetDirectoryName(fullPath);
+            if (!string.IsNullOrEmpty(dirPath) && !Directory.Exists(dirPath))
+            {
+                Directory.CreateDirectory(dirPath);
+            }
+
+            if (!File.Exists(fullPath) && textureGenerator != null)
+            {
+                Texture2D generatedTex = textureGenerator();
+                if (generatedTex != null)
+                {
+                    byte[] pngBytes = generatedTex.EncodeToPNG();
+                    Object.DestroyImmediate(generatedTex);
+                    File.WriteAllBytes(fullPath, pngBytes);
+                    UnityEditor.AssetDatabase.ImportAsset(relativeAssetPath, UnityEditor.ImportAssetOptions.ForceUpdate);
+                }
+            }
+
+            UnityEditor.TextureImporter importer = UnityEditor.AssetImporter.GetAtPath(relativeAssetPath) as UnityEditor.TextureImporter;
+            if (importer == null && File.Exists(fullPath))
+            {
+                UnityEditor.AssetDatabase.ImportAsset(relativeAssetPath, UnityEditor.ImportAssetOptions.ForceUpdate);
+                importer = UnityEditor.AssetImporter.GetAtPath(relativeAssetPath) as UnityEditor.TextureImporter;
+            }
+
+            if (importer != null)
+            {
+                bool needsReimport = false;
+                if (importer.textureType != UnityEditor.TextureImporterType.Sprite)
+                {
+                    importer.textureType = UnityEditor.TextureImporterType.Sprite;
+                    needsReimport = true;
+                }
+                if (importer.spriteImportMode != UnityEditor.SpriteImportMode.Single)
+                {
+                    importer.spriteImportMode = UnityEditor.SpriteImportMode.Single;
+                    needsReimport = true;
+                }
+                if (!importer.alphaIsTransparency)
+                {
+                    importer.alphaIsTransparency = true;
+                    needsReimport = true;
+                }
+                if (importer.mipmapEnabled)
+                {
+                    importer.mipmapEnabled = false;
+                    needsReimport = true;
+                }
+                if ((importer.spriteBorder - border).sqrMagnitude > 0.01f)
+                {
+                    importer.spriteBorder = border;
+                    needsReimport = true;
+                }
+
+                if (needsReimport)
+                {
+                    importer.SaveAndReimport();
+                }
+            }
+
+            Sprite persistentSprite = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>(relativeAssetPath);
+            if (persistentSprite == null)
+            {
+                Object[] subAssets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath(relativeAssetPath);
+                if (subAssets != null)
+                {
+                    for (int i = 0; i < subAssets.Length; i++)
+                    {
+                        if (subAssets[i] is Sprite subSp)
+                        {
+                            persistentSprite = subSp;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (persistentSprite != null)
+                return persistentSprite;
+        }
+#endif
+
+        // 런타임 폴백 (씬 직렬화 참조가 누락된 경우 디스크 또는 생성기로부터 생성)
+        if (!string.IsNullOrEmpty(relativeAssetPath))
+        {
+            string fullPath = Path.Combine(Directory.GetCurrentDirectory(), relativeAssetPath);
+            if (File.Exists(fullPath))
+            {
+                byte[] fileBytes = File.ReadAllBytes(fullPath);
+                Texture2D diskTex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+                if (diskTex.LoadImage(fileBytes))
+                {
+                    diskTex.wrapMode = TextureWrapMode.Clamp;
+                    diskTex.filterMode = FilterMode.Bilinear;
+                    Sprite diskSp = Sprite.Create(diskTex, new Rect(0, 0, diskTex.width, diskTex.height), pivot, 100f, 0, SpriteMeshType.FullRect, border);
+                    diskSp.name = !string.IsNullOrEmpty(spriteName) ? spriteName : Path.GetFileNameWithoutExtension(relativeAssetPath);
+                    return diskSp;
+                }
+            }
+        }
+
+        if (textureGenerator != null)
+        {
+            Texture2D runtimeTex = textureGenerator();
+            if (runtimeTex != null)
+            {
+                Sprite runtimeSp = Sprite.Create(runtimeTex, new Rect(0, 0, runtimeTex.width, runtimeTex.height), pivot, 100f, 0, SpriteMeshType.FullRect, border);
+                runtimeSp.name = !string.IsNullOrEmpty(spriteName) ? spriteName : "procedural_sprite";
+                return runtimeSp;
+            }
+        }
+
+        return null;
     }
 
     /// <summary>
@@ -414,65 +487,5 @@ public static class UIHelper
 
         effect.Configure(hoverScale);
         return effect;
-    }
-}
-
-/// <summary>
-/// 클릭 가능한 UI 요소(TurnEndButtonUI, DrawPileUI, DiscardPileUI, QuitGameButton, ResultActionButton 등)에 부착되어
-/// 마우스 포인터가 올라왔을 때(OnPointerEnter) 크기가 커지고, 벗어났을 때(OnPointerExit) 원래 크기로 돌아오게 하는 컴포넌트입니다.
-/// </summary>
-public class UIHoverScaleEffect : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
-{
-    [SerializeField] private float hoverScaleMultiplier = 1.12f;
-
-    private Vector3 baseScale = Vector3.one;
-    private bool baseScaleCached = false;
-    private bool isHovered = false;
-
-    public float HoverScaleMultiplier => hoverScaleMultiplier;
-    public bool IsHovered => isHovered;
-
-    public void Configure(float hoverScale)
-    {
-        hoverScaleMultiplier = Mathf.Max(1.01f, hoverScale);
-        CacheBaseScaleIfNeeded();
-    }
-
-    private void CacheBaseScaleIfNeeded()
-    {
-        if (!baseScaleCached)
-        {
-            Vector3 cur = transform.localScale;
-            baseScale = cur.sqrMagnitude > 0.001f ? cur : Vector3.one;
-            baseScaleCached = true;
-        }
-    }
-
-    public void OnPointerEnter(PointerEventData eventData)
-    {
-        CacheBaseScaleIfNeeded();
-
-        Selectable sel = GetComponent<Selectable>();
-        if (sel != null && !sel.IsInteractable())
-            return;
-
-        isHovered = true;
-        transform.localScale = baseScale * hoverScaleMultiplier;
-    }
-
-    public void OnPointerExit(PointerEventData eventData)
-    {
-        CacheBaseScaleIfNeeded();
-        isHovered = false;
-        transform.localScale = baseScale;
-    }
-
-    private void OnDisable()
-    {
-        if (baseScaleCached)
-        {
-            isHovered = false;
-            transform.localScale = baseScale;
-        }
     }
 }

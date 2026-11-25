@@ -208,9 +208,17 @@ public class BattleResultUIManager : Singleton<BattleResultUIManager>
                 rt.localPosition = Vector3.zero;
 
                 Image dimImg = resultOverlayPanel.GetComponent<Image>();
+                dimImg.sprite = UIHelper.GetOrCreateSolidWhiteSprite();
                 dimImg.color = new Color(0f, 0f, 0f, 0.76f);
                 dimImg.raycastTarget = true;
             }
+        }
+
+        if (resultOverlayPanel != null)
+        {
+            Image dimImg = resultOverlayPanel.GetComponent<Image>();
+            if (dimImg != null && dimImg.sprite == null)
+                dimImg.sprite = UIHelper.GetOrCreateSolidWhiteSprite();
         }
 
         if (resultWindowRect == null && resultOverlayPanel != null)
@@ -249,6 +257,9 @@ public class BattleResultUIManager : Singleton<BattleResultUIManager>
 
         if (resultWindowRect != null)
         {
+            Image winImg = resultWindowRect.GetComponent<Image>();
+            if (winImg != null && winImg.sprite == null)
+                winImg.sprite = PauseMenuManager.GetOrCreateWindowSprite();
             resultWindowRect.anchorMin = new Vector2(0.5f, 0.5f);
             resultWindowRect.anchorMax = new Vector2(0.5f, 0.5f);
             resultWindowRect.pivot = new Vector2(0.5f, 0.5f);
@@ -339,6 +350,10 @@ public class BattleResultUIManager : Singleton<BattleResultUIManager>
 
             if (actionButton != null)
             {
+                Image btnImg = actionButton.GetComponent<Image>();
+                if (btnImg != null && btnImg.sprite == null)
+                    btnImg.sprite = PauseMenuManager.GetOrCreateButtonSprite();
+
                 RectTransform btnRt = actionButton.GetComponent<RectTransform>();
                 NormalizeCenteredRect(btnRt, new Vector2(0f, -72f), new Vector2(320f, 72f));
 

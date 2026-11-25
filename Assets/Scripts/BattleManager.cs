@@ -7,6 +7,7 @@ using UnityEngine.InputSystem;
 public class BattleManager : Singleton<BattleManager>
 {
     public static event System.Action OnPlayerTurnEndedEvent;
+    public static event System.Action<ETurn> OnTurnPhaseChanged;
     public static System.Func<SelectableUnit, IEnumerator> EnemyTurnTutorialHook;
 
     [Header("현재 턴 상태")]
@@ -410,6 +411,7 @@ public class BattleManager : Singleton<BattleManager>
         isDoubleStarGainActiveThisTurn = false;
         currunt_Turn = ETurn.PLAYER;
         currentTurnNumber++;
+        OnTurnPhaseChanged?.Invoke(ETurn.PLAYER);
 
         EnsureSceneReferences();
 
@@ -463,6 +465,7 @@ public class BattleManager : Singleton<BattleManager>
 
         isPhaseTransitioning = true;
         currunt_Turn = ETurn.ENEMY;
+        OnTurnPhaseChanged?.Invoke(ETurn.ENEMY);
 
         for (int i = 0; i < playerUnits.Count; i++)
         {

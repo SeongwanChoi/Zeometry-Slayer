@@ -53,6 +53,18 @@ public class SplineTargetingArrow : Singleton<SplineTargetingArrow>
         HideArrow();
     }
 
+    public void EnsureArrowUI()
+    {
+        InitializeSplineAndUI();
+        if (!Application.isPlaying)
+        {
+            if (targetBracketRoot != null)
+                targetBracketRoot.gameObject.SetActive(false);
+            if (arrowRootRect != null)
+                arrowRootRect.gameObject.SetActive(false);
+        }
+    }
+
     private void InitializeSplineAndUI()
     {
         if (spline == null)
@@ -107,7 +119,10 @@ public class SplineTargetingArrow : Singleton<SplineTargetingArrow>
             {
                 targetBracketRoot = tbTr.GetComponent<RectTransform>();
             }
+        }
 
+        if (targetBracketRoot != null)
+        {
             Sprite cornerSp = GetOrCreateCornerBracketSprite();
             Vector2[] cornerAnchors =
             {
@@ -146,6 +161,9 @@ public class SplineTargetingArrow : Singleton<SplineTargetingArrow>
                 else
                 {
                     cornerBrackets[i] = cTr.GetComponent<RectTransform>();
+                    Image img = cTr.GetComponent<Image>();
+                    if (img != null && img.sprite == null)
+                        img.sprite = cornerSp;
                 }
             }
         }
@@ -185,6 +203,15 @@ public class SplineTargetingArrow : Singleton<SplineTargetingArrow>
                 nodeImages.Add(img);
             }
         }
+        else
+        {
+            Sprite nodeSp = GetOrCreateArrowNodeSprite();
+            for (int i = 0; i < nodeImages.Count; i++)
+            {
+                if (nodeImages[i] != null && nodeImages[i].sprite == null)
+                    nodeImages[i].sprite = nodeSp;
+            }
+        }
 
         // 3) 화살표 머리(Head) 오브젝트 생성
         if (headRect == null)
@@ -209,6 +236,10 @@ public class SplineTargetingArrow : Singleton<SplineTargetingArrow>
             headImage.sprite = GetOrCreateArrowHeadSprite();
             headImage.color = normalArrowColor;
             headImage.raycastTarget = false;
+        }
+        else if (headImage != null && headImage.sprite == null)
+        {
+            headImage.sprite = GetOrCreateArrowHeadSprite();
         }
     }
 
@@ -380,57 +411,63 @@ public class SplineTargetingArrow : Singleton<SplineTargetingArrow>
     }
 
     // =========================================================================
-    // 슬더스 스타일 화살표 마디 / 화살표 머리 / 코너 브래킷 텍스처 생성기
+    // 슬더스 스타일 화살표 마디 / 화살표 머리 / 코너 브래킷 텍스처 생성기 (Assets/Resource/UI 폴더에 영구 저장)
     // =========================================================================
     private static Sprite GetOrCreateArrowNodeSprite()
     {
         if (cachedNodeSprite != null) return cachedNodeSprite;
 
-        int w = 64;
-        int h = 56;
-        Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
-        tex.wrapMode = TextureWrapMode.Clamp;
-        Color[] pixels = new Color[w * h];
-
-        Color darkBorder = new Color(0.24f, 0.02f, 0.04f, 0.98f);
-        Color deepRed = new Color(0.68f, 0.08f, 0.12f, 1f);
-        Color brightRed = new Color(0.95f, 0.22f, 0.24f, 1f);
-
-        for (int y = 0; y < h; y++)
-        {
-            float ny = (float)y / (h - 1); // 0(bottom) ~ 1(top)
-            for (int x = 0; x < w; x++)
+        cachedNodeSprite = UIHelper.GetOrSaveProceduralSprite(
+            "Assets/Resource/UI/ui_arrow_node.png",
+            "sts_arrow_node",
+            Vector4.zero,
+            () =>
             {
-                float nx = ((float)x / (w - 1) - 0.5f) * 2f; // -1 ~ 1
-                float absX = Mathf.Abs(nx);
+                int w = 64;
+                int h = 56;
+                Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+                tex.wrapMode = TextureWrapMode.Clamp;
+                Color[] pixels = new Color[w * h];
 
-                // 위쪽으로 볼록한 화살 비늘(Chevron Scale) 형태
-                float archY = ny + absX * 0.42f;
-                bool inside = (archY >= 0.22f && archY <= 0.92f && absX <= 0.86f);
+                Color darkBorder = new Color(0.24f, 0.02f, 0.04f, 0.98f);
+                Color deepRed = new Color(0.68f, 0.08f, 0.12f, 1f);
+                Color brightRed = new Color(0.95f, 0.22f, 0.24f, 1f);
 
-                Color c = Color.clear;
-                if (inside)
+                for (int y = 0; y < h; y++)
                 {
-                    bool isBorder = (archY < 0.30f || archY > 0.84f || absX > 0.78f);
-                    if (isBorder)
+                    float ny = (float)y / (h - 1); // 0(bottom) ~ 1(top)
+                    for (int x = 0; x < w; x++)
                     {
-                        c = darkBorder;
-                    }
-                    else
-                    {
-                        float centerHighlight = Mathf.Clamp01(1f - absX * 1.15f);
-                        c = Color.Lerp(deepRed, brightRed, centerHighlight);
+                        float nx = ((float)x / (w - 1) - 0.5f) * 2f; // -1 ~ 1
+                        float absX = Mathf.Abs(nx);
+
+                        // 위쪽으로 볼록한 화살 비늘(Chevron Scale) 형태
+                        float archY = ny + absX * 0.42f;
+                        bool inside = (archY >= 0.22f && archY <= 0.92f && absX <= 0.86f);
+
+                        Color c = Color.clear;
+                        if (inside)
+                        {
+                            bool isBorder = (archY < 0.30f || archY > 0.84f || absX > 0.78f);
+                            if (isBorder)
+                            {
+                                c = darkBorder;
+                            }
+                            else
+                            {
+                                float centerHighlight = Mathf.Clamp01(1f - absX * 1.15f);
+                                c = Color.Lerp(deepRed, brightRed, centerHighlight);
+                            }
+                        }
+                        pixels[y * w + x] = c;
                     }
                 }
-                pixels[y * w + x] = c;
+
+                tex.SetPixels(pixels);
+                tex.Apply();
+                return tex;
             }
-        }
-
-        tex.SetPixels(pixels);
-        tex.Apply();
-
-        cachedNodeSprite = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 100f);
-        cachedNodeSprite.name = "sts_arrow_node";
+        );
         return cachedNodeSprite;
     }
 
@@ -438,53 +475,59 @@ public class SplineTargetingArrow : Singleton<SplineTargetingArrow>
     {
         if (cachedHeadSprite != null) return cachedHeadSprite;
 
-        int w = 96;
-        int h = 96;
-        Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
-        tex.wrapMode = TextureWrapMode.Clamp;
-        Color[] pixels = new Color[w * h];
-
-        Color darkBorder = new Color(0.22f, 0.02f, 0.03f, 0.98f);
-        Color sideCrimson = new Color(0.72f, 0.08f, 0.12f, 1f);
-        Color centerScarlet = new Color(0.98f, 0.25f, 0.25f, 1f);
-
-        for (int y = 0; y < h; y++)
-        {
-            float ny = (float)y / (h - 1); // 0(base) ~ 1(tip)
-            for (int x = 0; x < w; x++)
+        cachedHeadSprite = UIHelper.GetOrSaveProceduralSprite(
+            "Assets/Resource/UI/ui_arrow_head.png",
+            "sts_arrow_head",
+            Vector4.zero,
+            () =>
             {
-                float nx = ((float)x / (w - 1) - 0.5f) * 2f; // -1 ~ 1
-                float absX = Mathf.Abs(nx);
+                int w = 96;
+                int h = 96;
+                Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+                tex.wrapMode = TextureWrapMode.Clamp;
+                Color[] pixels = new Color[w * h];
 
-                // 위쪽(ny=0.95)이 뾰족하고 아래쪽이 살짝 오목하게 들어간 슬더스 화살촉 모양
-                float maxHalfWidth = (0.95f - ny) * 0.92f;
-                float bottomConcave = 0.12f + absX * 0.14f;
+                Color darkBorder = new Color(0.22f, 0.02f, 0.03f, 0.98f);
+                Color sideCrimson = new Color(0.72f, 0.08f, 0.12f, 1f);
+                Color centerScarlet = new Color(0.98f, 0.25f, 0.25f, 1f);
 
-                if (ny <= 0.95f && ny >= bottomConcave && absX <= maxHalfWidth)
+                for (int y = 0; y < h; y++)
                 {
-                    float edgeDist = Mathf.Min(maxHalfWidth - absX, ny - bottomConcave);
-                    if (edgeDist < 0.055f)
+                    float ny = (float)y / (h - 1); // 0(base) ~ 1(tip)
+                    for (int x = 0; x < w; x++)
                     {
-                        pixels[y * w + x] = darkBorder;
-                    }
-                    else
-                    {
-                        float ridge = Mathf.Clamp01(1f - (absX / Mathf.Max(0.01f, maxHalfWidth)));
-                        pixels[y * w + x] = Color.Lerp(sideCrimson, centerScarlet, ridge * 0.85f);
+                        float nx = ((float)x / (w - 1) - 0.5f) * 2f; // -1 ~ 1
+                        float absX = Mathf.Abs(nx);
+
+                        // 위쪽(ny=0.95)이 뾰족하고 아래쪽이 살짝 오목하게 들어간 슬더스 화살촉 모양
+                        float maxHalfWidth = (0.95f - ny) * 0.92f;
+                        float bottomConcave = 0.12f + absX * 0.14f;
+
+                        if (ny <= 0.95f && ny >= bottomConcave && absX <= maxHalfWidth)
+                        {
+                            float edgeDist = Mathf.Min(maxHalfWidth - absX, ny - bottomConcave);
+                            if (edgeDist < 0.055f)
+                            {
+                                pixels[y * w + x] = darkBorder;
+                            }
+                            else
+                            {
+                                float ridge = Mathf.Clamp01(1f - (absX / Mathf.Max(0.01f, maxHalfWidth)));
+                                pixels[y * w + x] = Color.Lerp(sideCrimson, centerScarlet, ridge * 0.85f);
+                            }
+                        }
+                        else
+                        {
+                            pixels[y * w + x] = Color.clear;
+                        }
                     }
                 }
-                else
-                {
-                    pixels[y * w + x] = Color.clear;
-                }
+
+                tex.SetPixels(pixels);
+                tex.Apply();
+                return tex;
             }
-        }
-
-        tex.SetPixels(pixels);
-        tex.Apply();
-
-        cachedHeadSprite = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.65f), 100f);
-        cachedHeadSprite.name = "sts_arrow_head";
+        );
         return cachedHeadSprite;
     }
 
@@ -492,40 +535,46 @@ public class SplineTargetingArrow : Singleton<SplineTargetingArrow>
     {
         if (cachedCornerBracketSprite != null) return cachedCornerBracketSprite;
 
-        int size = 48;
-        Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
-        tex.wrapMode = TextureWrapMode.Clamp;
-        Color[] pixels = new Color[size * size];
-
-        Color outlineCol = new Color(0.18f, 0.08f, 0.01f, 0.98f);
-        Color goldCol = new Color(1.0f, 0.86f, 0.28f, 1.0f);
-
-        // 좌상단(┏) 모양 코너 브래킷 생성
-        for (int y = 0; y < size; y++)
-        {
-            for (int x = 0; x < size; x++)
+        cachedCornerBracketSprite = UIHelper.GetOrSaveProceduralSprite(
+            "Assets/Resource/UI/ui_target_corner_bracket.png",
+            "sts_target_corner",
+            Vector4.zero,
+            () =>
             {
-                int topY = (size - 1) - y;
-                bool inHorizontalBar = (topY >= 2 && topY <= 9 && x >= 2 && x <= 32);
-                bool inVerticalBar = (x >= 2 && x <= 9 && topY >= 2 && topY <= 32);
+                int size = 48;
+                Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+                tex.wrapMode = TextureWrapMode.Clamp;
+                Color[] pixels = new Color[size * size];
 
-                if (inHorizontalBar || inVerticalBar)
+                Color outlineCol = new Color(0.18f, 0.08f, 0.01f, 0.98f);
+                Color goldCol = new Color(1.0f, 0.86f, 0.28f, 1.0f);
+
+                // 좌상단(┏) 모양 코너 브래킷 생성
+                for (int y = 0; y < size; y++)
                 {
-                    bool isRim = (topY <= 3 || x <= 3 || (inHorizontalBar && topY >= 8 && x > 9) || (inVerticalBar && x >= 8 && topY > 9));
-                    pixels[y * size + x] = isRim ? outlineCol : goldCol;
+                    for (int x = 0; x < size; x++)
+                    {
+                        int topY = (size - 1) - y;
+                        bool inHorizontalBar = (topY >= 2 && topY <= 9 && x >= 2 && x <= 32);
+                        bool inVerticalBar = (x >= 2 && x <= 9 && topY >= 2 && topY <= 32);
+
+                        if (inHorizontalBar || inVerticalBar)
+                        {
+                            bool isRim = (topY <= 3 || x <= 3 || (inHorizontalBar && topY >= 8 && x > 9) || (inVerticalBar && x >= 8 && topY > 9));
+                            pixels[y * size + x] = isRim ? outlineCol : goldCol;
+                        }
+                        else
+                        {
+                            pixels[y * size + x] = Color.clear;
+                        }
+                    }
                 }
-                else
-                {
-                    pixels[y * size + x] = Color.clear;
-                }
+
+                tex.SetPixels(pixels);
+                tex.Apply();
+                return tex;
             }
-        }
-
-        tex.SetPixels(pixels);
-        tex.Apply();
-
-        cachedCornerBracketSprite = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f);
-        cachedCornerBracketSprite.name = "sts_target_corner";
+        );
         return cachedCornerBracketSprite;
     }
 }

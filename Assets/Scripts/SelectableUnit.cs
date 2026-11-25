@@ -868,15 +868,19 @@ public class SelectableUnit : MonoBehaviour, IPointerClickHandler, IPointerEnter
                 statusUI = existing.GetComponent<UnitStatusUI>();
         }
 
+        bool createdNew = false;
         if (statusUI == null)
         {
             GameObject uiObj = new GameObject(uiName, typeof(RectTransform), typeof(CanvasGroup), typeof(UnitStatusUI));
             uiObj.layer = LayerMask.NameToLayer("UI");
             uiObj.transform.SetParent(uiRoot, false);
             statusUI = uiObj.GetComponent<UnitStatusUI>();
+            createdNew = true;
         }
 
         statusUI.Initialize(this, customFeatherSprite, atkSkillSprite, defSkillSprite, critSkillSprite);
+        if (createdNew)
+            statusUI.UpdatePosition();
     }
 
     public void EnsureSkillUI(
@@ -922,15 +926,19 @@ public class SelectableUnit : MonoBehaviour, IPointerClickHandler, IPointerEnter
                 skillUI = existing.GetComponent<PlayerSkillUI>();
         }
 
+        bool createdNew = false;
         if (skillUI == null)
         {
             GameObject uiObj = new GameObject(skillUiName, typeof(RectTransform), typeof(CanvasGroup), typeof(PlayerSkillUI));
             uiObj.layer = LayerMask.NameToLayer("UI");
             uiObj.transform.SetParent(skillRoot, false);
             skillUI = uiObj.GetComponent<PlayerSkillUI>();
+            createdNew = true;
         }
 
         skillUI.Initialize(this, atkSkillSprite, defSkillSprite, critSkillSprite);
+        if (createdNew)
+            skillUI.UpdatePosition();
     }
 
     public void RefreshStatusUI()

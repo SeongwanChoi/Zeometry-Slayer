@@ -1,0 +1,54 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Mat_CyberCityHighway
+  m_Shader: {fileID: 4800000, guid: 1a7078d60d9cba4458967a55a53cc3af, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs: []
+    m_Ints: []
+    m_Floats:
+    - _Aspect: 1.7778
+    - _Brightness: 1.25
+    - _EnemyBlend: 0
+    - _HorizonY: 0.63
+    - _ScrollSpeed: 1
+    - _ScrollTime: 0
+    - _StreakCount: 7
+    - _UseCustomTime: 1
+    m_Colors:
+    - _EnemyBuildingFill: {r: 0.15999997, g: 0.04, b: 0.11999995, a: 1}
+    - _EnemyFloorBot: {r: 0.14999998, g: 0.03, b: 0.10999996, a: 1}
+    - _EnemyFloorTop: {r: 0.29999998, g: 0.06999998, b: 0.19999996, a: 1}
+    - _EnemyPrimaryNeon: {r: 1, g: 0.37999994, b: 0.52, a: 1}
+    - _EnemyRoadFill: {r: 0.52, g: 0.12999997, b: 0.29999998, a: 1}
+    - _EnemySecondaryNeon: {r: 0.95, g: 0.29999998, b: 0.65999997, a: 1}
+    - _EnemySkyHorizon: {r: 0.53999996, g: 0.12999997, b: 0.29999998, a: 1}
+    - _EnemySkyTop: {r: 0.23999995, g: 0.049999982, b: 0.15999997, a: 1}
+    - _PlayerBuildingFill: {r: 0.049999982, g: 0.10999996, b: 0.24999997, a: 1}
+    - _PlayerFloorBot: {r: 0.04, g: 0.11999995, b: 0.28999996, a: 1}
+    - _PlayerFloorTop: {r: 0.06999998, g: 0.20999995, b: 0.45999992, a: 1}
+    - _PlayerPrimaryNeon: {r: 0.39999998, g: 0.96, b: 1, a: 1}
+    - _PlayerRoadFill: {r: 0.12999997, g: 0.43999997, b: 0.75, a: 1}
+    - _PlayerSecondaryNeon: {r: 0.35999998, g: 0.7, b: 1, a: 1}
+    - _PlayerSkyHorizon: {r: 0.12999997, g: 0.37999994, b: 0.7, a: 1}
+    - _PlayerSkyTop: {r: 0.049999982, g: 0.13999996, b: 0.33999997, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

@@ -442,6 +442,13 @@ public class BattleResourceUIManager : Singleton<BattleResourceUIManager>
             }
         }
 
+        if (starCounterRoot != null)
+        {
+            Image bgImg = starCounterRoot.GetComponent<Image>();
+            if (bgImg != null && bgImg.sprite == null)
+                bgImg.sprite = UnitStatusUI.GetOrCreateSolidWhiteSprite();
+        }
+
         if (criticalStarSprite == null)
             criticalStarSprite = GetOrCreateCriticalStarSprite();
 
@@ -597,65 +604,71 @@ public class BattleResourceUIManager : Singleton<BattleResourceUIManager>
     {
         if (cachedCostBadgeSprite != null) return cachedCostBadgeSprite;
 
-        int w = 96;
-        int h = 96;
-        Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
-        tex.wrapMode = TextureWrapMode.Clamp;
-        tex.filterMode = FilterMode.Bilinear;
-
-        Color[] pixels = new Color[w * h];
-        Color darkRim = new Color(0.015f, 0.055f, 0.16f, 1f);
-        Color neonCyan = new Color(0.22f, 0.86f, 1f, 1f);
-        Color innerBlue = new Color(0.035f, 0.17f, 0.38f, 1f);
-        Color innerGlow = new Color(0.10f, 0.52f, 0.82f, 1f);
-
-        for (int y = 0; y < h; y++)
-        {
-            float ny = ((y + 0.5f) / h - 0.5f) * 2f;
-            for (int x = 0; x < w; x++)
+        cachedCostBadgeSprite = UIHelper.GetOrSaveProceduralSprite(
+            "Assets/Resource/UI/ui_cost_number_badge.png",
+            "ui_energy_orb",
+            Vector4.zero,
+            () =>
             {
-                float nx = ((x + 0.5f) / w - 0.5f) * 2f;
-                float dist = Mathf.Sqrt(nx * nx + ny * ny);
-                Color c = Color.clear;
-                if (dist <= 1.18f)
+                int w = 96;
+                int h = 96;
+                Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+                tex.wrapMode = TextureWrapMode.Clamp;
+                tex.filterMode = FilterMode.Bilinear;
+
+                Color[] pixels = new Color[w * h];
+                Color darkRim = new Color(0.015f, 0.055f, 0.16f, 1f);
+                Color neonCyan = new Color(0.22f, 0.86f, 1f, 1f);
+                Color innerBlue = new Color(0.035f, 0.17f, 0.38f, 1f);
+                Color innerGlow = new Color(0.10f, 0.52f, 0.82f, 1f);
+
+                for (int y = 0; y < h; y++)
                 {
-                    if (dist > 1f)
+                    float ny = ((y + 0.5f) / h - 0.5f) * 2f;
+                    for (int x = 0; x < w; x++)
                     {
-                        c = neonCyan;
-                        c.a = (1f - (dist - 1f) / 0.18f) * 0.18f;
-                    }
-                    else if (dist > 0.86f)
-                    {
-                        c = darkRim;
-                        c.a = Mathf.Clamp01((1f - dist) / 0.02f);
-                    }
-                    else if (dist > 0.78f)
-                    {
-                        c = Color.Lerp(darkRim, neonCyan, 1f - (dist - 0.78f) / 0.08f);
-                        c.a = 1f;
-                    }
-                    else if (dist > 0.70f)
-                    {
-                        c = darkRim;
-                        c.a = 1f;
-                    }
-                    else
-                    {
-                        float radialGlow = Mathf.Clamp01(1f - dist / 0.72f);
-                        float topLight = Mathf.Clamp01((ny + 0.8f) / 1.8f);
-                        c = Color.Lerp(innerBlue, innerGlow, radialGlow * 0.62f + topLight * 0.18f);
-                        c.a = 1f;
+                        float nx = ((x + 0.5f) / w - 0.5f) * 2f;
+                        float dist = Mathf.Sqrt(nx * nx + ny * ny);
+                        Color c = Color.clear;
+                        if (dist <= 1.18f)
+                        {
+                            if (dist > 1f)
+                            {
+                                c = neonCyan;
+                                c.a = (1f - (dist - 1f) / 0.18f) * 0.18f;
+                            }
+                            else if (dist > 0.86f)
+                            {
+                                c = darkRim;
+                                c.a = Mathf.Clamp01((1f - dist) / 0.02f);
+                            }
+                            else if (dist > 0.78f)
+                            {
+                                c = Color.Lerp(darkRim, neonCyan, 1f - (dist - 0.78f) / 0.08f);
+                                c.a = 1f;
+                            }
+                            else if (dist > 0.70f)
+                            {
+                                c = darkRim;
+                                c.a = 1f;
+                            }
+                            else
+                            {
+                                float radialGlow = Mathf.Clamp01(1f - dist / 0.72f);
+                                float topLight = Mathf.Clamp01((ny + 0.8f) / 1.8f);
+                                c = Color.Lerp(innerBlue, innerGlow, radialGlow * 0.62f + topLight * 0.18f);
+                                c.a = 1f;
+                            }
+                        }
+                        pixels[y * w + x] = c;
                     }
                 }
-                pixels[y * w + x] = c;
+
+                tex.SetPixels(pixels);
+                tex.Apply();
+                return tex;
             }
-        }
-
-        tex.SetPixels(pixels);
-        tex.Apply();
-
-        cachedCostBadgeSprite = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 100f);
-        cachedCostBadgeSprite.name = "ui_energy_orb";
+        );
         return cachedCostBadgeSprite;
     }
 
@@ -663,9 +676,12 @@ public class BattleResourceUIManager : Singleton<BattleResourceUIManager>
     {
         if (cachedCriticalStarSprite != null) return cachedCriticalStarSprite;
 
-        Texture2D tex = CreateCriticalStarTexture(96, 96);
-        cachedCriticalStarSprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f);
-        cachedCriticalStarSprite.name = "icon_critical_star";
+        cachedCriticalStarSprite = UIHelper.GetOrSaveProceduralSprite(
+            "Assets/Resource/UI/icon_critical_star.png",
+            "icon_critical_star",
+            Vector4.zero,
+            () => CreateCriticalStarTexture(96, 96)
+        );
         return cachedCriticalStarSprite;
     }
 

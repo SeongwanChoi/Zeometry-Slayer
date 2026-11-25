@@ -505,6 +505,10 @@ public class DeckViewerModalUI : Singleton<DeckViewerModalUI>
             bgCloseBtn.transition = Selectable.Transition.None;
             bgCloseBtn.onClick.AddListener(OnClickClose);
         }
+        else if (rootDimImage != null && rootDimImage.sprite == null)
+        {
+            rootDimImage.sprite = UIHelper.GetOrCreateSolidWhiteSprite();
+        }
 
         EnsurePlayerDeckWindow();
         EnsurePileViewerGroup();
@@ -536,6 +540,9 @@ public class DeckViewerModalUI : Singleton<DeckViewerModalUI>
         else
         {
             playerDeckWindowRect = winTr.GetComponent<RectTransform>();
+            Image winImg = playerDeckWindowRect.GetComponent<Image>();
+            if (winImg != null && winImg.sprite == null)
+                winImg.sprite = SkillConfirmModalUI.GetOrCreateModalWindowSprite();
         }
 
         // 상단 타이틀 "덱"
@@ -580,7 +587,8 @@ public class DeckViewerModalUI : Singleton<DeckViewerModalUI>
         }
 
         // 상단 구분선
-        if (playerDeckWindowRect.Find("HeaderDividerLine") == null)
+        Transform divTr = playerDeckWindowRect.Find("HeaderDividerLine");
+        if (divTr == null)
         {
             GameObject divObj = new GameObject("HeaderDividerLine", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
             divObj.layer = LayerMask.NameToLayer("UI");
@@ -592,6 +600,12 @@ public class DeckViewerModalUI : Singleton<DeckViewerModalUI>
             Image divImg = divObj.GetComponent<Image>();
             divImg.sprite = SkillConfirmModalUI.GetOrCreateDividerLineSprite();
             divImg.raycastTarget = false;
+        }
+        else
+        {
+            Image divImg = divTr.GetComponent<Image>();
+            if (divImg != null && divImg.sprite == null)
+                divImg.sprite = SkillConfirmModalUI.GetOrCreateDividerLineSprite();
         }
 
         // 플레이어 이름 & 카드 구성 안내 텍스트
@@ -670,6 +684,9 @@ public class DeckViewerModalUI : Singleton<DeckViewerModalUI>
         else
         {
             playerDeckCloseXButton = closeXTr.GetComponent<Button>();
+            Image xImg = closeXTr.GetComponent<Image>();
+            if (xImg != null && xImg.sprite == null)
+                xImg.sprite = SkillConfirmModalUI.GetOrCreateDiamondCloseSprite();
         }
 
         if (playerDeckCloseXButton != null)
@@ -816,6 +833,22 @@ public class DeckViewerModalUI : Singleton<DeckViewerModalUI>
             Transform contentTr = scrollTr.Find("Viewport/GridContent");
             if (contentTr != null)
                 pileGridContentRect = contentTr.GetComponent<RectTransform>();
+
+            Transform sbTr = scrollTr.Find("RightScrollbar");
+            if (sbTr != null)
+            {
+                Image sbTrackImg = sbTr.GetComponent<Image>();
+                if (sbTrackImg != null && sbTrackImg.sprite == null)
+                    sbTrackImg.sprite = UIHelper.GetOrCreateSolidWhiteSprite();
+
+                Transform hTr = sbTr.Find("SlidingArea/Handle");
+                if (hTr != null)
+                {
+                    Image hImg = hTr.GetComponent<Image>();
+                    if (hImg != null && hImg.sprite == null)
+                        hImg.sprite = GetOrCreateGoldScrollbarHandleSprite();
+                }
+            }
         }
 
         // 빈 더미 안내 문구
@@ -884,6 +917,9 @@ public class DeckViewerModalUI : Singleton<DeckViewerModalUI>
         else
         {
             leftRibbonBackButton = backBtnTr.GetComponent<Button>();
+            Image backImg = backBtnTr.GetComponent<Image>();
+            if (backImg != null && backImg.sprite == null)
+                backImg.sprite = GetOrCreateRedRibbonBackSprite();
         }
 
         if (leftRibbonBackButton != null)
@@ -925,6 +961,10 @@ public class DeckViewerModalUI : Singleton<DeckViewerModalUI>
         }
         else
         {
+            Image bannerImg = bottomBannerTr.GetComponent<Image>();
+            if (bannerImg != null && bannerImg.sprite == null)
+                bannerImg.sprite = UIHelper.GetOrCreateSolidWhiteSprite();
+
             Transform ht = bottomBannerTr.Find("HintText");
             if (ht != null)
                 bottomHintBannerText = UIHelper.GetOrAddTMPText(ht.gameObject);
@@ -932,50 +972,56 @@ public class DeckViewerModalUI : Singleton<DeckViewerModalUI>
     }
 
     // =========================================================================
-    // 프로시저럴 UI 스프라이트 (좌측 붉은 제비꼬리 리본 버튼 / 금색 스크롤바 핸들)
+    // 프로시저럴 UI 스프라이트 (Assets/Resource/UI 폴더에 영구 저장)
     // =========================================================================
     private static Sprite GetOrCreateRedRibbonBackSprite()
     {
         if (cachedRedRibbonBackSprite != null) return cachedRedRibbonBackSprite;
 
-        int w = 128;
-        int h = 72;
-        Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
-        tex.wrapMode = TextureWrapMode.Clamp;
-        Color[] pixels = new Color[w * h];
-
-        Color crimsonTop = new Color(0.76f, 0.18f, 0.14f, 0.98f);
-        Color crimsonBot = new Color(0.52f, 0.10f, 0.08f, 0.98f);
-        Color goldBorder = new Color(0.82f, 0.65f, 0.36f, 0.98f);
-        float halfH = (h - 1) * 0.5f;
-
-        for (int y = 0; y < h; y++)
-        {
-            float dyNorm = Mathf.Abs(y - halfH) / halfH; // 0(중앙) ~ 1(상/하단)
-            // 오른쪽 끝이 안쪽으로 파인 제비꼬리(Swallowtail Ribbon) 형태
-            float maxRightX = Mathf.Lerp(w - 28f, w - 4f, dyNorm);
-            Color fillCol = Color.Lerp(crimsonBot, crimsonTop, (float)y / (h - 1));
-
-            for (int x = 0; x < w; x++)
+        cachedRedRibbonBackSprite = UIHelper.GetOrSaveProceduralSprite(
+            "Assets/Resource/UI/ui_sts_red_ribbon_back.png",
+            "ui_sts_red_ribbon_back",
+            Vector4.zero,
+            () =>
             {
-                if (x <= maxRightX && y >= 2 && y <= h - 3)
+                int w = 128;
+                int h = 72;
+                Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+                tex.wrapMode = TextureWrapMode.Clamp;
+                Color[] pixels = new Color[w * h];
+
+                Color crimsonTop = new Color(0.76f, 0.18f, 0.14f, 0.98f);
+                Color crimsonBot = new Color(0.52f, 0.10f, 0.08f, 0.98f);
+                Color goldBorder = new Color(0.82f, 0.65f, 0.36f, 0.98f);
+                float halfH = (h - 1) * 0.5f;
+
+                for (int y = 0; y < h; y++)
                 {
-                    bool isTopOrBotBorder = (y <= 5 || y >= h - 6);
-                    bool isRightNotchBorder = (maxRightX - x) <= 3.5f;
-                    pixels[y * w + x] = (isTopOrBotBorder || isRightNotchBorder) ? goldBorder : fillCol;
+                    float dyNorm = Mathf.Abs(y - halfH) / halfH; // 0(중앙) ~ 1(상/하단)
+                    // 오른쪽 끝이 안쪽으로 파인 제비꼬리(Swallowtail Ribbon) 형태
+                    float maxRightX = Mathf.Lerp(w - 28f, w - 4f, dyNorm);
+                    Color fillCol = Color.Lerp(crimsonBot, crimsonTop, (float)y / (h - 1));
+
+                    for (int x = 0; x < w; x++)
+                    {
+                        if (x <= maxRightX && y >= 2 && y <= h - 3)
+                        {
+                            bool isTopOrBotBorder = (y <= 5 || y >= h - 6);
+                            bool isRightNotchBorder = (maxRightX - x) <= 3.5f;
+                            pixels[y * w + x] = (isTopOrBotBorder || isRightNotchBorder) ? goldBorder : fillCol;
+                        }
+                        else
+                        {
+                            pixels[y * w + x] = Color.clear;
+                        }
+                    }
                 }
-                else
-                {
-                    pixels[y * w + x] = Color.clear;
-                }
+
+                tex.SetPixels(pixels);
+                tex.Apply();
+                return tex;
             }
-        }
-
-        tex.SetPixels(pixels);
-        tex.Apply();
-
-        cachedRedRibbonBackSprite = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 100f);
-        cachedRedRibbonBackSprite.name = "ui_sts_red_ribbon_back";
+        );
         return cachedRedRibbonBackSprite;
     }
 
@@ -983,39 +1029,45 @@ public class DeckViewerModalUI : Singleton<DeckViewerModalUI>
     {
         if (cachedDiamondHandleSprite != null) return cachedDiamondHandleSprite;
 
-        int w = 24;
-        int h = 48;
-        Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
-        tex.wrapMode = TextureWrapMode.Clamp;
-        Color[] pixels = new Color[w * h];
-
-        Color goldCore = new Color(0.92f, 0.76f, 0.32f, 0.98f);
-        Color goldDark = new Color(0.62f, 0.46f, 0.16f, 0.98f);
-
-        for (int y = 0; y < h; y++)
-        {
-            for (int x = 0; x < w; x++)
+        cachedDiamondHandleSprite = UIHelper.GetOrSaveProceduralSprite(
+            "Assets/Resource/UI/ui_sts_gold_scrollbar_handle.png",
+            "ui_sts_gold_scrollbar_handle",
+            new Vector4(6, 8, 6, 8),
+            () =>
             {
-                int dx = Mathf.Min(x, w - 1 - x);
-                int dy = Mathf.Min(y, h - 1 - y);
-                int corner = dx + dy - 6;
-                int dist = Mathf.Min(Mathf.Min(dx, dy), corner);
-                if (dist >= 0)
+                int w = 24;
+                int h = 48;
+                Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+                tex.wrapMode = TextureWrapMode.Clamp;
+                Color[] pixels = new Color[w * h];
+
+                Color goldCore = new Color(0.92f, 0.76f, 0.32f, 0.98f);
+                Color goldDark = new Color(0.62f, 0.46f, 0.16f, 0.98f);
+
+                for (int y = 0; y < h; y++)
                 {
-                    pixels[y * w + x] = dist < 2 ? goldDark : goldCore;
+                    for (int x = 0; x < w; x++)
+                    {
+                        int dx = Mathf.Min(x, w - 1 - x);
+                        int dy = Mathf.Min(y, h - 1 - y);
+                        int corner = dx + dy - 6;
+                        int dist = Mathf.Min(Mathf.Min(dx, dy), corner);
+                        if (dist >= 0)
+                        {
+                            pixels[y * w + x] = dist < 2 ? goldDark : goldCore;
+                        }
+                        else
+                        {
+                            pixels[y * w + x] = Color.clear;
+                        }
+                    }
                 }
-                else
-                {
-                    pixels[y * w + x] = Color.clear;
-                }
+
+                tex.SetPixels(pixels);
+                tex.Apply();
+                return tex;
             }
-        }
-
-        tex.SetPixels(pixels);
-        tex.Apply();
-
-        cachedDiamondHandleSprite = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, new Vector4(6, 8, 6, 8));
-        cachedDiamondHandleSprite.name = "ui_sts_gold_scrollbar_handle";
+        );
         return cachedDiamondHandleSprite;
     }
 }

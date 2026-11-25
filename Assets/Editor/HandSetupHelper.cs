@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using TMPro;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -473,6 +474,31 @@ public static class HandSetupHelper
                 sceneModified = true;
             }
         }
+        if (splineArrow != null)
+        {
+            splineArrow.EnsureArrowUI();
+        }
+
+        // 모든 UnitStatusUI / PlayerSkillUI에 Assets/Resource/UI 영구 스프라이트 재연결 보장
+        UnitStatusUI[] allStatusUIs = Object.FindObjectsByType<UnitStatusUI>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        if (allStatusUIs != null)
+        {
+            for (int i = 0; i < allStatusUIs.Length; i++)
+            {
+                if (allStatusUIs[i] != null)
+                    allStatusUIs[i].EnsureUIHierarchy();
+            }
+        }
+
+        PlayerSkillUI[] allSkillUIs = Object.FindObjectsByType<PlayerSkillUI>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        if (allSkillUIs != null)
+        {
+            for (int i = 0; i < allSkillUIs.Length; i++)
+            {
+                if (allSkillUIs[i] != null)
+                    allSkillUIs[i].EnsureUIHierarchy();
+            }
+        }
 
         // 18. TutorialManager가 씬에 존재하는 경우 스킬 아이콘 3종 스프라이트 참조 자동 연결
         TutorialManager tutorialManager = Object.FindFirstObjectByType<TutorialManager>();
@@ -506,11 +532,248 @@ public static class HandSetupHelper
             if (deckViewerModal != null) { deckViewerModal.EnsureModalUI(); deckViewerModal.HideImmediate(); }
         }
 
+        // 20. 사이버 시티 동적 배경 맵 (Quad + URP 네온 그리드 셰이더 + 기하학 네온 파티클) 자동 세팅
+        EnsureCyberCityBackgroundInActiveScene(ref sceneModified);
+
+        // 21. 중요: 씬 파일(level0)에 인메모리 TMP_FontAsset / Material / Texture2D / Sprite가 내장되어
+        // 빌드 실행 시 "level0 is corrupted! [Position out of bounds!]" 오류가 나는 것을 방지하기 위해
+        // 디스크에 존재하지 않는(!EditorUtility.IsPersistent) 인메모리 에셋 참조를 씬에서 모두 정리합니다.
+        SanitizeSceneNonPersistentAssets(ref sceneModified);
+
         if (sceneModified)
         {
             EditorSceneManager.MarkSceneDirty(canvas.gameObject.scene);
             EditorSceneManager.SaveScene(canvas.gameObject.scene);
-            Debug.Log("[HandSetupHelper] 깃털 제곱 버프 UI / 좌하단 코스트 UI / 우하단 스타 UI / Buster·Arts·Quick 세팅이 완료되었습니다!");
+            Debug.Log("[HandSetupHelper] 사이버 시티 동적 배경 맵 & 전투/UI 세팅 및 씬 내장 에셋 정리가 완료되었습니다!");
+        }
+
+        SanitizeOtherScenesOnce();
+    }
+
+    private static bool isSanitizingOtherScenes = false;
+
+    private static void SanitizeOtherScenesOnce()
+    {
+        if (isSanitizingOtherScenes) return;
+        if (SessionState.GetBool("ZeometrySlayer_AllScenesSanitized_v7", false)) return;
+
+        SessionState.SetBool("ZeometrySlayer_AllScenesSanitized_v7", true);
+        isSanitizingOtherScenes = true;
+
+        try
+        {
+            string currentScenePath = EditorSceneManager.GetActiveScene().path;
+            string[] scenePaths = { "Assets/Scenes/TutorialScene.unity", "Assets/Scenes/BattleScene.unity" };
+
+            for (int i = 0; i < scenePaths.Length; i++)
+            {
+                string path = scenePaths[i];
+                if (string.IsNullOrEmpty(path) || !File.Exists(path))
+                    continue;
+
+                var openedScene = EditorSceneManager.OpenScene(path, OpenSceneMode.Single);
+                bool mod = false;
+
+                // 먼저 씬 내부의 비영구 MonoScript / Missing Script를 정리한 뒤 Ensure 메서드로 영구 .cs GUID 기반 재부착
+                SanitizeSceneNonPersistentAssets(ref mod);
+                EnsureCyberCityBackgroundInActiveScene(ref mod);
+
+                HandManager hm = Object.FindFirstObjectByType<HandManager>();
+                if (hm != null) { hm.EnsureDeckAndDiscardUI(); mod = true; }
+
+                PauseMenuManager pm = Object.FindFirstObjectByType<PauseMenuManager>();
+                if (pm != null)
+                {
+                    pm.EnsurePauseMenuUI();
+                    Canvas cv = Object.FindFirstObjectByType<Canvas>();
+                    Transform ov = cv != null ? cv.transform.Find("PauseOverlayPanel") : null;
+                    if (ov != null && ov.gameObject.activeSelf) ov.gameObject.SetActive(false);
+                    mod = true;
+                }
+
+                BattleResultUIManager rm = Object.FindFirstObjectByType<BattleResultUIManager>();
+                if (rm != null) { rm.EnsureResultUI(); rm.HideResultUI(); mod = true; }
+
+                BattleResourceUIManager resm = Object.FindFirstObjectByType<BattleResourceUIManager>();
+                if (resm != null) { resm.EnsureResourceUI(); resm.RefreshAllUI(); mod = true; }
+
+                SkillConfirmModalUI sm = Object.FindFirstObjectByType<SkillConfirmModalUI>();
+                if (sm != null) { sm.EnsureModalUI(); sm.HideImmediate(); mod = true; }
+
+                DeckViewerModalUI dm = Object.FindFirstObjectByType<DeckViewerModalUI>();
+                if (dm != null) { dm.EnsureModalUI(); dm.HideImmediate(); mod = true; }
+
+                SplineTargetingArrow sa = Object.FindFirstObjectByType<SplineTargetingArrow>();
+                if (sa != null) { sa.EnsureArrowUI(); mod = true; }
+
+                UnitStatusUI[] statusUIs = Object.FindObjectsByType<UnitStatusUI>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+                if (statusUIs != null)
+                {
+                    for (int u = 0; u < statusUIs.Length; u++)
+                    {
+                        if (statusUIs[u] != null) { statusUIs[u].EnsureUIHierarchy(); mod = true; }
+                    }
+                }
+
+                PlayerSkillUI[] skillUIs = Object.FindObjectsByType<PlayerSkillUI>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+                if (skillUIs != null)
+                {
+                    for (int s = 0; s < skillUIs.Length; s++)
+                    {
+                        if (skillUIs[s] != null) { skillUIs[s].EnsureUIHierarchy(); mod = true; }
+                    }
+                }
+
+                Text[] legacyTexts = Object.FindObjectsByType<Text>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+                if (legacyTexts != null)
+                {
+                    for (int t = 0; t < legacyTexts.Length; t++)
+                    {
+                        if (legacyTexts[t] != null)
+                        {
+                            UIHelper.GetOrAddTMPText(legacyTexts[t].gameObject);
+                            mod = true;
+                        }
+                    }
+                }
+
+                SanitizeSceneNonPersistentAssets(ref mod);
+                if (mod)
+                {
+                    EditorSceneManager.MarkSceneDirty(openedScene);
+                    EditorSceneManager.SaveScene(openedScene);
+                }
+            }
+
+            if (!string.IsNullOrEmpty(currentScenePath) && File.Exists(currentScenePath) &&
+                EditorSceneManager.GetActiveScene().path != currentScenePath)
+            {
+                EditorSceneManager.OpenScene(currentScenePath, OpenSceneMode.Single);
+            }
+        }
+        finally
+        {
+            isSanitizingOtherScenes = false;
+        }
+    }
+
+    private static void SanitizeSceneNonPersistentAssets(ref bool sceneModified)
+    {
+        TMP_FontAsset persistentTmpFont = UIHelper.GetDefaultPersistentTMPFont();
+        if (persistentTmpFont == null)
+        {
+            persistentTmpFont = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>("Assets/Resource/Fonts/LevelUp-TTF/LevelUp/ttf/LevelUp-Bold SDF.asset");
+        }
+
+        // 0) 씬 내장 MonoScript(!u!115) 및 Missing Script 제거 후 영구 .cs 스크립트 에셋으로 재바인딩
+        // (파일명과 클래스명이 달랐던 UIHoverScaleEffect, SkillIconPointerReceiver가 씬에 내장되어 level0 손상 크래시를 유발하는 문제 근본 해결)
+        GameObject[] allObjects = Object.FindObjectsByType<GameObject>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        if (allObjects != null)
+        {
+            for (int i = 0; i < allObjects.Length; i++)
+            {
+                GameObject go = allObjects[i];
+                if (go == null) continue;
+                int removed = GameObjectUtility.RemoveMonoBehavioursWithMissingScript(go);
+                if (removed > 0)
+                {
+                    EditorUtility.SetDirty(go);
+                    sceneModified = true;
+                }
+            }
+        }
+
+        MonoBehaviour[] allBehaviours = Object.FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        if (allBehaviours != null)
+        {
+            for (int i = 0; i < allBehaviours.Length; i++)
+            {
+                MonoBehaviour mb = allBehaviours[i];
+                if (mb == null) continue;
+
+                MonoScript ms = MonoScript.FromMonoBehaviour(mb);
+                if (ms != null && !EditorUtility.IsPersistent(ms))
+                {
+                    GameObject go = mb.gameObject;
+                    if (mb is UIHoverScaleEffect oldHover)
+                    {
+                        float mult = oldHover.HoverScaleMultiplier;
+                        Object.DestroyImmediate(oldHover);
+                        UIHoverScaleEffect newHover = go.AddComponent<UIHoverScaleEffect>();
+                        newHover.Configure(mult);
+                        EditorUtility.SetDirty(go);
+                        sceneModified = true;
+                    }
+                    else if (mb is SkillIconPointerReceiver oldReceiver)
+                    {
+                        Object.DestroyImmediate(oldReceiver);
+                        go.AddComponent<SkillIconPointerReceiver>();
+                        EditorUtility.SetDirty(go);
+                        sceneModified = true;
+                    }
+                }
+            }
+        }
+
+        // 1) 기본 TMP 폰트의 fallback 테이블에 비영구(In-Memory) 폰트가 들어갔다면 제거
+        if (persistentTmpFont != null && persistentTmpFont.fallbackFontAssetTable != null)
+        {
+            for (int i = persistentTmpFont.fallbackFontAssetTable.Count - 1; i >= 0; i--)
+            {
+                TMP_FontAsset fb = persistentTmpFont.fallbackFontAssetTable[i];
+                if (fb == null || !EditorUtility.IsPersistent(fb))
+                {
+                    persistentTmpFont.fallbackFontAssetTable.RemoveAt(i);
+                    EditorUtility.SetDirty(persistentTmpFont);
+                }
+            }
+        }
+
+        // 2) 씬 내 모든 TextMeshProUGUI가 비영구/기존 LiberationSans 대신 설정된 영구 디스크 에셋(LevelUp-Bold SDF)을 참조하도록 정리
+        TextMeshProUGUI[] allTmpTexts = Object.FindObjectsByType<TextMeshProUGUI>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        if (allTmpTexts != null && persistentTmpFont != null)
+        {
+            for (int i = 0; i < allTmpTexts.Length; i++)
+            {
+                TextMeshProUGUI tmp = allTmpTexts[i];
+                if (tmp == null) continue;
+
+                bool changed = false;
+                if (tmp.font == null || !EditorUtility.IsPersistent(tmp.font) || tmp.font.name.StartsWith("LiberationSans"))
+                {
+                    tmp.font = persistentTmpFont;
+                    changed = true;
+                }
+                if (tmp.fontSharedMaterial == null || !EditorUtility.IsPersistent(tmp.fontSharedMaterial) || (tmp.font == persistentTmpFont && tmp.fontSharedMaterial != persistentTmpFont.material))
+                {
+                    tmp.fontSharedMaterial = persistentTmpFont.material;
+                    changed = true;
+                }
+
+                if (changed)
+                {
+                    EditorUtility.SetDirty(tmp);
+                    sceneModified = true;
+                }
+            }
+        }
+
+        // 3) 씬 내 모든 Image 컴포넌트 중 디스크 에셋이 아닌 인메모리 프로시저럴 Sprite 참조를 null로 비움 (런타임 Awake에서 자동 생성됨)
+        Image[] allImages = Object.FindObjectsByType<Image>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        if (allImages != null)
+        {
+            for (int i = 0; i < allImages.Length; i++)
+            {
+                Image img = allImages[i];
+                if (img == null) continue;
+
+                if (img.sprite != null && !EditorUtility.IsPersistent(img.sprite))
+                {
+                    img.sprite = null;
+                    EditorUtility.SetDirty(img);
+                    sceneModified = true;
+                }
+            }
         }
     }
 
@@ -585,23 +848,21 @@ public static class HandSetupHelper
 
             uSo.ApplyModifiedPropertiesWithoutUndo();
 
-            unit.EnsureStatusUI(featherSprite, atkSkillSprite, defSkillSprite, critSkillSprite);
-            unit.RefreshStatusUI();
-            if (unit.StatusUI != null)
+            if (unit.StatusUI == null)
             {
-                Vector3 prevPos = unit.StatusUI.transform.localPosition;
-                unit.StatusUI.UpdatePosition();
-                if ((unit.StatusUI.transform.localPosition - prevPos).sqrMagnitude > 0.01f)
-                {
-                    EditorUtility.SetDirty(unit.StatusUI.transform);
-                    modified = true;
-                }
+                unit.EnsureStatusUI(featherSprite, atkSkillSprite, defSkillSprite, critSkillSprite);
+                unit.RefreshStatusUI();
+                modified = true;
             }
 
             if (isPlayer)
             {
-                unit.EnsureSkillUI(atkSkillSprite, defSkillSprite, critSkillSprite);
-                unit.RefreshSkillUI();
+                if (unit.SkillUI == null)
+                {
+                    unit.EnsureSkillUI(atkSkillSprite, defSkillSprite, critSkillSprite);
+                    unit.RefreshSkillUI();
+                    modified = true;
+                }
                 if (unit.SkillUI != null)
                 {
                     SerializedObject uSoSkill = new SerializedObject(unit);
@@ -609,14 +870,6 @@ public static class HandSetupHelper
                     {
                         uSoSkill.FindProperty("skillUI").objectReferenceValue = unit.SkillUI;
                         uSoSkill.ApplyModifiedPropertiesWithoutUndo();
-                        modified = true;
-                    }
-
-                    Vector3 prevSkillPos = unit.SkillUI.transform.localPosition;
-                    unit.SkillUI.UpdatePosition();
-                    if ((unit.SkillUI.transform.localPosition - prevSkillPos).sqrMagnitude > 0.01f)
-                    {
-                        EditorUtility.SetDirty(unit.SkillUI.transform);
                         modified = true;
                     }
                 }
@@ -884,5 +1137,381 @@ public static class HandSetupHelper
             importer.mipmapEnabled = false;
             importer.SaveAndReimport();
         }
+    }
+
+    // =========================================================================
+    // 22. 밝은 사이버 시티 동적 배경 맵 (Quad + URP 셰이더 + 기하학 네온 파티클) 자동 세팅
+    // =========================================================================
+    [MenuItem("Tools/Zeometry Slayer/사이버 시티 동적 배경 맵 생성 및 적용")]
+    public static void SetupCyberCityBackgroundMenu()
+    {
+        bool mod = false;
+        EnsureCyberCityBackgroundInActiveScene(ref mod, forceRegenerateTextures: true);
+        if (mod)
+        {
+            var activeScene = EditorSceneManager.GetActiveScene();
+            EditorSceneManager.MarkSceneDirty(activeScene);
+            EditorSceneManager.SaveScene(activeScene);
+        }
+        Debug.Log("[HandSetupHelper] 사이버 시티 동적 배경 맵(Quad + URP 셰이더 + 기하학 파티클)이 현재 씬에 적용되었습니다!");
+    }
+
+    public static void EnsureCyberCityBackgroundInActiveScene(ref bool sceneModified, bool forceRegenerateTextures = false)
+    {
+        Shader highwayShader = Shader.Find("Custom/URP_CyberCityHighway");
+        Shader particleShader = Shader.Find("Custom/URP_NeonParticleAdditive");
+        if (highwayShader == null || particleShader == null)
+            return;
+
+        EnsureFolderExists("Assets/Resource", "Background");
+        EnsureFolderExists("Assets", "Materials");
+
+        bool regenerateUnitShapes = forceRegenerateTextures || !SessionState.GetBool("ZeometrySlayer_GeoParticleUnitStyleV4", false);
+        if (regenerateUnitShapes)
+        {
+            SessionState.SetBool("ZeometrySlayer_GeoParticleUnitStyleV4", true);
+        }
+
+        // 1) Player/Enemy 스타일 네온 도형 파티클 4종 PNG 에셋 영구 저장 및 로드 (삼각형, 팔각형, 오각형, 사각형)
+        string[] shapePaths =
+        {
+            "Assets/Resource/Background/fx_geo_particle_triangle.png",
+            "Assets/Resource/Background/fx_geo_particle_octagon.png",
+            "Assets/Resource/Background/fx_geo_particle_pentagon.png",
+            "Assets/Resource/Background/fx_geo_particle_square.png"
+        };
+        Texture2D[] shapeTextures = new Texture2D[4];
+        for (int i = 0; i < 4; i++)
+        {
+            int idx = i;
+            shapeTextures[i] = EnsureParticleTextureAsset(
+                shapePaths[i],
+                () => CyberCityBackgroundController.CreateGeometricParticleTexture(idx, 128),
+                regenerateUnitShapes
+            );
+        }
+
+        // 2) 영구 머티리얼(.mat) 5종 생성/로드
+        Material highwayMat = EnsurePersistentMaterial("Assets/Materials/Mat_CyberCityHighway.mat", highwayShader, null, false);
+        if (highwayMat != null && highwayMat.HasProperty("_UseCustomTime") && highwayMat.GetFloat("_UseCustomTime") < 0.5f)
+        {
+            highwayMat.SetFloat("_UseCustomTime", 1f);
+            EditorUtility.SetDirty(highwayMat);
+            AssetDatabase.SaveAssets();
+        }
+        string[] particleMatPaths =
+        {
+            "Assets/Materials/Mat_GeoParticle_Triangle.mat",
+            "Assets/Materials/Mat_GeoParticle_Octagon.mat",
+            "Assets/Materials/Mat_GeoParticle_Pentagon.mat",
+            "Assets/Materials/Mat_GeoParticle_Square.mat"
+        };
+        Material[] particleMats = new Material[4];
+        for (int i = 0; i < 4; i++)
+        {
+            particleMats[i] = EnsurePersistentMaterial(particleMatPaths[i], particleShader, shapeTextures[i], regenerateUnitShapes);
+        }
+
+        // 3) CyberCityBackground 루트 오브젝트 생성/확인
+        GameObject rootObj = GameObject.Find("CyberCityBackground");
+        if (rootObj == null)
+        {
+            rootObj = new GameObject("CyberCityBackground");
+            sceneModified = true;
+        }
+        rootObj.transform.position = new Vector3(0f, 0f, 4f);
+        rootObj.transform.rotation = Quaternion.identity;
+        rootObj.transform.localScale = Vector3.one;
+
+        CyberCityBackgroundController controller = rootObj.GetComponent<CyberCityBackgroundController>();
+        if (controller == null)
+        {
+            controller = rootObj.AddComponent<CyberCityBackgroundController>();
+            sceneModified = true;
+        }
+
+        // 4) 자식 Quad (URP 셰이더 배경) 생성/설정 (MeshCollider 제거)
+        Transform quadTr = rootObj.transform.Find("CyberCityQuad");
+        GameObject quadObj;
+        if (quadTr == null)
+        {
+            quadObj = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            quadObj.name = "CyberCityQuad";
+            quadObj.transform.SetParent(rootObj.transform, false);
+            Collider col = quadObj.GetComponent<Collider>();
+            if (col != null)
+                Object.DestroyImmediate(col);
+            sceneModified = true;
+        }
+        else
+        {
+            quadObj = quadTr.gameObject;
+            Collider col = quadObj.GetComponent<Collider>();
+            if (col != null)
+            {
+                Object.DestroyImmediate(col);
+                sceneModified = true;
+            }
+        }
+
+        quadObj.transform.localPosition = Vector3.zero;
+        quadObj.transform.localRotation = Quaternion.identity;
+        quadObj.transform.localScale = new Vector3(20f, 10.6f, 1f);
+
+        MeshRenderer quadRenderer = quadObj.GetComponent<MeshRenderer>();
+        if (quadRenderer != null)
+        {
+            if (quadRenderer.sharedMaterial != highwayMat)
+            {
+                quadRenderer.sharedMaterial = highwayMat;
+                sceneModified = true;
+            }
+            if (quadRenderer.sortingOrder != -20)
+            {
+                quadRenderer.sortingOrder = -20;
+                sceneModified = true;
+            }
+            quadRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            quadRenderer.receiveShadows = false;
+        }
+
+        // 5) Player/Enemy 스타일 네온 도형 파티클 4종 (삼각형, 팔각형, 오각형, 사각형) 생성/설정 (구형 다이아몬드 제거)
+        Transform oldDiamond = rootObj.transform.Find("GeoParticles_Diamond");
+        if (oldDiamond != null)
+        {
+            Object.DestroyImmediate(oldDiamond.gameObject);
+            sceneModified = true;
+        }
+
+        string[] particleNames = { "GeoParticles_Triangle", "GeoParticles_Octagon", "GeoParticles_Pentagon", "GeoParticles_Square" };
+        ParticleSystem[] particleSystems = new ParticleSystem[4];
+        for (int i = 0; i < 4; i++)
+        {
+            particleSystems[i] = EnsureGeometricParticleSystem(rootObj.transform, particleNames[i], particleMats[i], ref sceneModified);
+        }
+
+        // 6) Controller 직렬화 필드 연결 및 연한 네온 파티클 색상 반영
+        SerializedObject ctrlSo = new SerializedObject(controller);
+        SetObjRef(ctrlSo, "backgroundQuadRenderer", quadRenderer, ref sceneModified);
+        SerializedProperty pColProp = ctrlSo.FindProperty("playerParticleColor");
+        if (pColProp != null)
+        {
+            Color targetPCol = new Color(0.58f, 0.97f, 1.0f, 0.34f);
+            if (pColProp.colorValue != targetPCol)
+            {
+                pColProp.colorValue = targetPCol;
+                sceneModified = true;
+            }
+        }
+        SerializedProperty eColProp = ctrlSo.FindProperty("enemyParticleColor");
+        if (eColProp != null)
+        {
+            Color targetECol = new Color(1.0f, 0.56f, 0.68f, 0.36f);
+            if (eColProp.colorValue != targetECol)
+            {
+                eColProp.colorValue = targetECol;
+                sceneModified = true;
+            }
+        }
+        SerializedProperty psArrayProp = ctrlSo.FindProperty("geometricParticleSystems");
+        if (psArrayProp != null)
+        {
+            if (psArrayProp.arraySize != particleSystems.Length)
+            {
+                psArrayProp.arraySize = particleSystems.Length;
+                sceneModified = true;
+            }
+            for (int i = 0; i < particleSystems.Length; i++)
+            {
+                if (psArrayProp.GetArrayElementAtIndex(i).objectReferenceValue != particleSystems[i])
+                {
+                    psArrayProp.GetArrayElementAtIndex(i).objectReferenceValue = particleSystems[i];
+                    sceneModified = true;
+                }
+            }
+        }
+        ctrlSo.ApplyModifiedPropertiesWithoutUndo();
+
+        // 7) 기존 정적 BackGround 스프라이트는 비활성화 (동적 배경과 겹치지 않도록 처리)
+        GameObject oldBg = GameObject.Find("BackGround");
+        if (oldBg != null && oldBg.activeSelf)
+        {
+            oldBg.SetActive(false);
+            sceneModified = true;
+        }
+    }
+
+    private static void EnsureFolderExists(string parentFolder, string newFolderName)
+    {
+        string combined = $"{parentFolder}/{newFolderName}";
+        if (!AssetDatabase.IsValidFolder(combined))
+        {
+            AssetDatabase.CreateFolder(parentFolder, newFolderName);
+        }
+    }
+
+    private static Texture2D EnsureParticleTextureAsset(string assetPath, System.Func<Texture2D> generator, bool forceOverwrite = false)
+    {
+        string fullPath = Path.Combine(Directory.GetCurrentDirectory(), assetPath);
+        if (forceOverwrite || !File.Exists(fullPath))
+        {
+            Texture2D tex = generator();
+            byte[] pngBytes = tex.EncodeToPNG();
+            Object.DestroyImmediate(tex);
+            File.WriteAllBytes(fullPath, pngBytes);
+            AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceUpdate);
+        }
+
+        TextureImporter importer = AssetImporter.GetAtPath(assetPath) as TextureImporter;
+        if (importer != null)
+        {
+            bool changed = false;
+            if (importer.textureType != TextureImporterType.Default) { importer.textureType = TextureImporterType.Default; changed = true; }
+            if (!importer.alphaIsTransparency) { importer.alphaIsTransparency = true; changed = true; }
+            if (importer.mipmapEnabled) { importer.mipmapEnabled = false; changed = true; }
+            if (importer.wrapMode != TextureWrapMode.Clamp) { importer.wrapMode = TextureWrapMode.Clamp; changed = true; }
+            if (changed) importer.SaveAndReimport();
+        }
+
+        return AssetDatabase.LoadAssetAtPath<Texture2D>(assetPath);
+    }
+
+    private static Material EnsurePersistentMaterial(string matPath, Shader shader, Texture2D mainTex, bool resetGlowIntensity = false)
+    {
+        Material mat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+        if (mat == null)
+        {
+            mat = new Material(shader);
+            if (mainTex != null)
+            {
+                mat.SetTexture("_MainTex", mainTex);
+                mat.SetFloat("_GlowIntensity", 0.85f);
+            }
+            AssetDatabase.CreateAsset(mat, matPath);
+            AssetDatabase.SaveAssets();
+        }
+        else
+        {
+            bool dirty = false;
+            if (mat.shader != shader)
+            {
+                mat.shader = shader;
+                dirty = true;
+            }
+            if (mainTex != null && mat.GetTexture("_MainTex") != mainTex)
+            {
+                mat.SetTexture("_MainTex", mainTex);
+                dirty = true;
+            }
+            if (mainTex != null && resetGlowIntensity && mat.HasProperty("_GlowIntensity"))
+            {
+                mat.SetFloat("_GlowIntensity", 0.85f);
+                dirty = true;
+            }
+            if (dirty)
+            {
+                EditorUtility.SetDirty(mat);
+                AssetDatabase.SaveAssets();
+            }
+        }
+        return mat;
+    }
+
+    private static ParticleSystem EnsureGeometricParticleSystem(
+        Transform parent,
+        string childName,
+        Material particleMat,
+        ref bool sceneModified)
+    {
+        Transform tr = parent.Find(childName);
+        GameObject psObj;
+        bool created = false;
+        if (tr == null)
+        {
+            psObj = new GameObject(childName, typeof(ParticleSystem));
+            psObj.transform.SetParent(parent, false);
+            created = true;
+            sceneModified = true;
+        }
+        else
+        {
+            psObj = tr.gameObject;
+        }
+
+        psObj.transform.localPosition = new Vector3(0f, -5.2f, -1f);
+        psObj.transform.localRotation = Quaternion.identity;
+        psObj.transform.localScale = Vector3.one;
+
+        ParticleSystem ps = psObj.GetComponent<ParticleSystem>();
+        if (created)
+        {
+            var main = ps.main;
+            main.duration = 8f;
+            main.loop = true;
+            main.prewarm = true;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(5.5f, 8.5f);
+            main.startSpeed = 0f;
+            main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
+            main.simulationSpace = ParticleSystemSimulationSpace.Local;
+
+            var shape = ps.shape;
+            shape.enabled = true;
+            shape.shapeType = ParticleSystemShapeType.Box;
+            shape.scale = new Vector3(19f, 1.2f, 0.1f);
+
+            var velocity = ps.velocityOverLifetime;
+            velocity.enabled = true;
+            velocity.space = ParticleSystemSimulationSpace.Local;
+            velocity.x = new ParticleSystem.MinMaxCurve(-0.18f, 0.18f);
+            velocity.y = new ParticleSystem.MinMaxCurve(0.75f, 1.40f);
+            velocity.z = new ParticleSystem.MinMaxCurve(0f, 0f);
+
+            var rotOverLife = ps.rotationOverLifetime;
+            rotOverLife.enabled = true;
+            rotOverLife.z = new ParticleSystem.MinMaxCurve(-60f * Mathf.Deg2Rad, 60f * Mathf.Deg2Rad);
+        }
+
+        // 기존 씬 오브젝트에도 Player/Enemy 스타일 크기·밀도·연한 알파값을 일관되게 적용
+        var mainAlways = ps.main;
+        mainAlways.startColor = new Color(0.58f, 0.97f, 1.0f, 0.34f);
+        mainAlways.startSize = new ParticleSystem.MinMaxCurve(0.28f, 0.54f);
+        mainAlways.maxParticles = 18;
+
+        var emissionAlways = ps.emission;
+        emissionAlways.enabled = true;
+        emissionAlways.rateOverTime = 1.7f;
+
+        var colOverLife = ps.colorOverLifetime;
+        colOverLife.enabled = true;
+        Gradient grad = new Gradient();
+        grad.SetKeys(
+            new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
+            new[]
+            {
+                new GradientAlphaKey(0f, 0f),
+                new GradientAlphaKey(0.65f, 0.15f),
+                new GradientAlphaKey(0.55f, 0.72f),
+                new GradientAlphaKey(0f, 1f)
+            }
+        );
+        colOverLife.color = new ParticleSystem.MinMaxGradient(grad);
+
+        ParticleSystemRenderer renderer = psObj.GetComponent<ParticleSystemRenderer>();
+        if (renderer != null)
+        {
+            if (renderer.sharedMaterial != particleMat)
+            {
+                renderer.sharedMaterial = particleMat;
+                sceneModified = true;
+            }
+            if (renderer.sortingOrder != -10)
+            {
+                renderer.sortingOrder = -10;
+                sceneModified = true;
+            }
+            renderer.renderMode = ParticleSystemRenderMode.Billboard;
+        }
+
+        return ps;
     }
 }

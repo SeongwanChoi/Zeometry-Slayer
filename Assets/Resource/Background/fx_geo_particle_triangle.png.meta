@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 1283920eebba1cc4192c58fef631cf5a
+guid: 7e3011a64f3c4b04c9385e278c884626
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 1006438208724343397
-    second: icon_cost_gem_0
+      213: 8042990604280353132
+    second: fx_geo_particle_triangle_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -57,7 +57,7 @@ TextureImporter:
   alphaUsage: 1
   alphaIsTransparency: 1
   spriteTessellationDetail: -1
-  textureType: 8
+  textureType: 0
   textureShape: 1
   singleChannelComponent: 0
   flipbookRows: 1
@@ -113,13 +113,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: icon_cost_gem_0
+      name: fx_geo_particle_triangle_0
       rect:
         serializedVersion: 2
-        x: 3
-        y: 0
-        width: 42
-        height: 48
+        x: 2
+        y: 2
+        width: 124
+        height: 124
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 56a156fe73697fd00800000000000000
-      internalID: 1006438208724343397
+      spriteID: c615feb47517e9f60800000000000000
+      internalID: 8042990604280353132
       vertices: []
       indices: 
       edges: []
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      icon_cost_gem_0: 1006438208724343397
+      fx_geo_particle_triangle_0: 8042990604280353132
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

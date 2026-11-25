@@ -229,6 +229,12 @@ public class SkillConfirmModalUI : Singleton<SkillConfirmModalUI>
             bgCancelBtn.transition = Selectable.Transition.None;
             bgCancelBtn.onClick.AddListener(OnClickCancel);
         }
+        else
+        {
+            Image dimImg = modalRootRect.GetComponent<Image>();
+            if (dimImg != null && dimImg.sprite == null)
+                dimImg.sprite = UIHelper.GetOrCreateSolidWhiteSprite();
+        }
 
         if (modalCanvasGroup == null)
         {
@@ -257,6 +263,9 @@ public class SkillConfirmModalUI : Singleton<SkillConfirmModalUI>
         else
         {
             windowRect = winTr.GetComponent<RectTransform>();
+            Image winImg = windowRect.GetComponent<Image>();
+            if (winImg != null && winImg.sprite == null)
+                winImg.sprite = GetOrCreateWindowBgSprite();
         }
 
         // 1) 상단 타이틀 "스킬 사용" 및 서브타이틀 "S k i l l"
@@ -311,7 +320,8 @@ public class SkillConfirmModalUI : Singleton<SkillConfirmModalUI>
         }
 
         // 상단 푸른 구분선 (HeaderDivider)
-        if (windowRect.Find("HeaderDivider") == null)
+        Transform divTr = windowRect.Find("HeaderDivider");
+        if (divTr == null)
         {
             GameObject divObj = new GameObject("HeaderDivider", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
             divObj.layer = LayerMask.NameToLayer("UI");
@@ -323,6 +333,12 @@ public class SkillConfirmModalUI : Singleton<SkillConfirmModalUI>
             Image divImg = divObj.GetComponent<Image>();
             divImg.sprite = GetOrCreateDividerLineSprite();
             divImg.raycastTarget = false;
+        }
+        else
+        {
+            Image divImg = divTr.GetComponent<Image>();
+            if (divImg != null && divImg.sprite == null)
+                divImg.sprite = GetOrCreateDividerLineSprite();
         }
 
         // 2) 우측 상단 마름모 [X] 닫기 버튼
@@ -348,6 +364,9 @@ public class SkillConfirmModalUI : Singleton<SkillConfirmModalUI>
         else
         {
             closeXButton = closeTr.GetComponent<Button>();
+            Image closeImg = closeTr.GetComponent<Image>();
+            if (closeImg != null && closeImg.sprite == null)
+                closeImg.sprite = GetOrCreateDiamondCloseSprite();
             if (closeXButton != null)
             {
                 closeXButton.onClick.RemoveAllListeners();
@@ -379,6 +398,9 @@ public class SkillConfirmModalUI : Singleton<SkillConfirmModalUI>
         else
         {
             iconFrameRt = iconFrameTr.GetComponent<RectTransform>();
+            Image frameImg = iconFrameRt.GetComponent<Image>();
+            if (frameImg != null && frameImg.sprite == null)
+                frameImg.sprite = UIHelper.GetOrCreateSolidWhiteSprite();
         }
 
         if (skillIconImage == null && iconFrameRt != null)
@@ -561,6 +583,9 @@ public class SkillConfirmModalUI : Singleton<SkillConfirmModalUI>
         {
             btnObj = tr.gameObject;
             btnRef = btnObj.GetComponent<Button>();
+            Image img = btnObj.GetComponent<Image>();
+            if (img != null && img.sprite == null)
+                img.sprite = GetOrCreateCapsuleBtnSprite();
             Transform lblTr = btnObj.transform.Find("Label");
             if (lblTr != null)
                 labelTextRef = UIHelper.GetOrAddTMPText(lblTr.gameObject);
@@ -575,7 +600,7 @@ public class SkillConfirmModalUI : Singleton<SkillConfirmModalUI>
     }
 
     // =========================================================================
-    // FGO 스타일 모달 텍스처 프로시저럴 생성기
+    // FGO 스타일 모달 텍스처 프로시저럴 생성기 (Assets/Resource/UI 폴더에 영구 저장)
     // =========================================================================
     public static Sprite GetOrCreateModalWindowSprite() => GetOrCreateWindowBgSprite();
 
@@ -583,44 +608,50 @@ public class SkillConfirmModalUI : Singleton<SkillConfirmModalUI>
     {
         if (cachedWindowBgSprite != null) return cachedWindowBgSprite;
 
-        int w = 128;
-        int h = 128;
-        Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
-        tex.wrapMode = TextureWrapMode.Clamp;
-        Color[] pixels = new Color[w * h];
-
-        Color outerBorder = new Color(0.55f, 0.63f, 0.78f, 0.96f);
-        Color innerDarkTop = new Color(0.03f, 0.06f, 0.14f, 0.94f);
-        Color innerDarkBot = new Color(0.01f, 0.02f, 0.06f, 0.96f);
-
-        for (int y = 0; y < h; y++)
-        {
-            float ty = (float)y / (h - 1);
-            Color bgCol = Color.Lerp(innerDarkBot, innerDarkTop, ty);
-
-            for (int x = 0; x < w; x++)
+        cachedWindowBgSprite = UIHelper.GetOrSaveProceduralSprite(
+            "Assets/Resource/UI/ui_fgo_modal_window.png",
+            "ui_fgo_modal_window",
+            new Vector4(8, 8, 8, 8),
+            () =>
             {
-                int distEdge = Mathf.Min(Mathf.Min(x, w - 1 - x), Mathf.Min(y, h - 1 - y));
-                if (distEdge < 2)
+                int w = 128;
+                int h = 128;
+                Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+                tex.wrapMode = TextureWrapMode.Clamp;
+                Color[] pixels = new Color[w * h];
+
+                Color outerBorder = new Color(0.55f, 0.63f, 0.78f, 0.96f);
+                Color innerDarkTop = new Color(0.03f, 0.06f, 0.14f, 0.94f);
+                Color innerDarkBot = new Color(0.01f, 0.02f, 0.06f, 0.96f);
+
+                for (int y = 0; y < h; y++)
                 {
-                    pixels[y * w + x] = outerBorder;
+                    float ty = (float)y / (h - 1);
+                    Color bgCol = Color.Lerp(innerDarkBot, innerDarkTop, ty);
+
+                    for (int x = 0; x < w; x++)
+                    {
+                        int distEdge = Mathf.Min(Mathf.Min(x, w - 1 - x), Mathf.Min(y, h - 1 - y));
+                        if (distEdge < 2)
+                        {
+                            pixels[y * w + x] = outerBorder;
+                        }
+                        else if (distEdge == 2)
+                        {
+                            pixels[y * w + x] = new Color(0.18f, 0.25f, 0.42f, 0.95f);
+                        }
+                        else
+                        {
+                            pixels[y * w + x] = bgCol;
+                        }
+                    }
                 }
-                else if (distEdge == 2)
-                {
-                    pixels[y * w + x] = new Color(0.18f, 0.25f, 0.42f, 0.95f);
-                }
-                else
-                {
-                    pixels[y * w + x] = bgCol;
-                }
+
+                tex.SetPixels(pixels);
+                tex.Apply();
+                return tex;
             }
-        }
-
-        tex.SetPixels(pixels);
-        tex.Apply();
-
-        cachedWindowBgSprite = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, new Vector4(8, 8, 8, 8));
-        cachedWindowBgSprite.name = "ui_fgo_modal_window";
+        );
         return cachedWindowBgSprite;
     }
 
@@ -628,54 +659,60 @@ public class SkillConfirmModalUI : Singleton<SkillConfirmModalUI>
     {
         if (cachedCapsuleBtnSprite != null) return cachedCapsuleBtnSprite;
 
-        int w = 192;
-        int h = 64;
-        Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
-        tex.wrapMode = TextureWrapMode.Clamp;
-        Color[] pixels = new Color[w * h];
-
-        float radius = h * 0.46f;
-        for (int y = 0; y < h; y++)
-        {
-            float ny = (float)y / (h - 1);
-            // FGO 스타일 은백색 메탈릭 그라디언트
-            Color topCol = new Color(0.98f, 0.98f, 0.99f, 1f);
-            Color midCol = new Color(0.86f, 0.86f, 0.89f, 1f);
-            Color botCol = new Color(0.68f, 0.67f, 0.70f, 1f);
-            Color gradCol = ny > 0.5f
-                ? Color.Lerp(midCol, topCol, (ny - 0.5f) * 2f)
-                : Color.Lerp(botCol, midCol, ny * 2f);
-
-            for (int x = 0; x < w; x++)
+        cachedCapsuleBtnSprite = UIHelper.GetOrSaveProceduralSprite(
+            "Assets/Resource/UI/ui_fgo_capsule_btn.png",
+            "ui_fgo_capsule_btn",
+            new Vector4(32, 16, 32, 16),
+            () =>
             {
-                float cx = Mathf.Clamp(x, radius, w - 1 - radius);
-                float cy = (h - 1) * 0.5f;
-                float dist = Vector2.Distance(new Vector2(x, y), new Vector2(cx, cy));
+                int w = 192;
+                int h = 64;
+                Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+                tex.wrapMode = TextureWrapMode.Clamp;
+                Color[] pixels = new Color[w * h];
 
-                Color c = Color.clear;
-                if (dist <= radius)
+                float radius = h * 0.46f;
+                for (int y = 0; y < h; y++)
                 {
-                    float edge = radius - dist;
-                    float alpha = Mathf.Clamp01(edge / 1.5f);
-                    if (edge < 2.8f)
+                    float ny = (float)y / (h - 1);
+                    // FGO 스타일 은백색 메탈릭 그라디언트
+                    Color topCol = new Color(0.98f, 0.98f, 0.99f, 1f);
+                    Color midCol = new Color(0.86f, 0.86f, 0.89f, 1f);
+                    Color botCol = new Color(0.68f, 0.67f, 0.70f, 1f);
+                    Color gradCol = ny > 0.5f
+                        ? Color.Lerp(midCol, topCol, (ny - 0.5f) * 2f)
+                        : Color.Lerp(botCol, midCol, ny * 2f);
+
+                    for (int x = 0; x < w; x++)
                     {
-                        c = new Color(0.42f, 0.40f, 0.36f, alpha);
-                    }
-                    else
-                    {
-                        c = gradCol;
-                        c.a = alpha;
+                        float cx = Mathf.Clamp(x, radius, w - 1 - radius);
+                        float cy = (h - 1) * 0.5f;
+                        float dist = Vector2.Distance(new Vector2(x, y), new Vector2(cx, cy));
+
+                        Color c = Color.clear;
+                        if (dist <= radius)
+                        {
+                            float edge = radius - dist;
+                            float alpha = Mathf.Clamp01(edge / 1.5f);
+                            if (edge < 2.8f)
+                            {
+                                c = new Color(0.42f, 0.40f, 0.36f, alpha);
+                            }
+                            else
+                            {
+                                c = gradCol;
+                                c.a = alpha;
+                            }
+                        }
+                        pixels[y * w + x] = c;
                     }
                 }
-                pixels[y * w + x] = c;
+
+                tex.SetPixels(pixels);
+                tex.Apply();
+                return tex;
             }
-        }
-
-        tex.SetPixels(pixels);
-        tex.Apply();
-
-        cachedCapsuleBtnSprite = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, new Vector4(32, 16, 32, 16));
-        cachedCapsuleBtnSprite.name = "ui_fgo_capsule_btn";
+        );
         return cachedCapsuleBtnSprite;
     }
 
@@ -683,57 +720,63 @@ public class SkillConfirmModalUI : Singleton<SkillConfirmModalUI>
     {
         if (cachedDiamondBtnSprite != null) return cachedDiamondBtnSprite;
 
-        int size = 96;
-        Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
-        tex.wrapMode = TextureWrapMode.Clamp;
-        Color[] pixels = new Color[size * size];
-
-        float half = (size - 1) * 0.5f;
-        float diamondRadius = half * 0.88f;
-
-        for (int y = 0; y < size; y++)
-        {
-            for (int x = 0; x < size; x++)
+        cachedDiamondBtnSprite = UIHelper.GetOrSaveProceduralSprite(
+            "Assets/Resource/UI/ui_fgo_diamond_close.png",
+            "ui_fgo_diamond_close",
+            Vector4.zero,
+            () =>
             {
-                float dx = Mathf.Abs(x - half);
-                float dy = Mathf.Abs(y - half);
-                float manhattan = dx + dy;
+                int size = 96;
+                Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+                tex.wrapMode = TextureWrapMode.Clamp;
+                Color[] pixels = new Color[size * size];
 
-                Color c = Color.clear;
-                if (manhattan <= diamondRadius)
+                float half = (size - 1) * 0.5f;
+                float diamondRadius = half * 0.88f;
+
+                for (int y = 0; y < size; y++)
                 {
-                    float edge = diamondRadius - manhattan;
-                    float alpha = Mathf.Clamp01(edge / 1.8f);
+                    for (int x = 0; x < size; x++)
+                    {
+                        float dx = Mathf.Abs(x - half);
+                        float dy = Mathf.Abs(y - half);
+                        float manhattan = dx + dy;
 
-                    // 중앙 X 마크 판정
-                    float diag1 = Mathf.Abs((x - half) - (y - half)) * 0.7071f;
-                    float diag2 = Mathf.Abs((x - half) + (y - half)) * 0.7071f;
-                    float xMarkDist = Mathf.Min(diag1, diag2);
-                    bool inXRange = dx < half * 0.42f && dy < half * 0.42f;
+                        Color c = Color.clear;
+                        if (manhattan <= diamondRadius)
+                        {
+                            float edge = diamondRadius - manhattan;
+                            float alpha = Mathf.Clamp01(edge / 1.8f);
 
-                    if (edge < 3.5f)
-                    {
-                        c = new Color(0.45f, 0.48f, 0.56f, alpha);
-                    }
-                    else if (inXRange && xMarkDist < 4.2f)
-                    {
-                        c = new Color(0.10f, 0.14f, 0.28f, alpha);
-                    }
-                    else
-                    {
-                        float shade = Mathf.Clamp01((y / (float)size) * 0.35f + 0.65f);
-                        c = new Color(shade, shade, shade * 1.02f, alpha);
+                            // 중앙 X 마크 판정
+                            float diag1 = Mathf.Abs((x - half) - (y - half)) * 0.7071f;
+                            float diag2 = Mathf.Abs((x - half) + (y - half)) * 0.7071f;
+                            float xMarkDist = Mathf.Min(diag1, diag2);
+                            bool inXRange = dx < half * 0.42f && dy < half * 0.42f;
+
+                            if (edge < 3.5f)
+                            {
+                                c = new Color(0.45f, 0.48f, 0.56f, alpha);
+                            }
+                            else if (inXRange && xMarkDist < 4.2f)
+                            {
+                                c = new Color(0.10f, 0.14f, 0.28f, alpha);
+                            }
+                            else
+                            {
+                                float shade = Mathf.Clamp01((y / (float)size) * 0.35f + 0.65f);
+                                c = new Color(shade, shade, shade * 1.02f, alpha);
+                            }
+                        }
+                        pixels[y * size + x] = c;
                     }
                 }
-                pixels[y * size + x] = c;
+
+                tex.SetPixels(pixels);
+                tex.Apply();
+                return tex;
             }
-        }
-
-        tex.SetPixels(pixels);
-        tex.Apply();
-
-        cachedDiamondBtnSprite = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f);
-        cachedDiamondBtnSprite.name = "ui_fgo_diamond_close";
+        );
         return cachedDiamondBtnSprite;
     }
 
@@ -741,28 +784,34 @@ public class SkillConfirmModalUI : Singleton<SkillConfirmModalUI>
     {
         if (cachedDividerLineSprite != null) return cachedDividerLineSprite;
 
-        int w = 256;
-        int h = 4;
-        Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
-        tex.wrapMode = TextureWrapMode.Clamp;
-        Color[] pixels = new Color[w * h];
-
-        for (int x = 0; x < w; x++)
-        {
-            float nx = Mathf.Abs((x / (float)(w - 1)) - 0.5f) * 2f;
-            float alpha = Mathf.Clamp01(1f - nx * nx);
-            Color col = Color.Lerp(new Color(0.25f, 0.55f, 0.95f, alpha * 0.85f), new Color(0.75f, 0.90f, 1f, alpha), 1f - nx);
-            for (int y = 0; y < h; y++)
+        cachedDividerLineSprite = UIHelper.GetOrSaveProceduralSprite(
+            "Assets/Resource/UI/ui_fgo_divider.png",
+            "ui_fgo_divider",
+            Vector4.zero,
+            () =>
             {
-                pixels[y * w + x] = col;
+                int w = 256;
+                int h = 4;
+                Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+                tex.wrapMode = TextureWrapMode.Clamp;
+                Color[] pixels = new Color[w * h];
+
+                for (int x = 0; x < w; x++)
+                {
+                    float nx = Mathf.Abs((x / (float)(w - 1)) - 0.5f) * 2f;
+                    float alpha = Mathf.Clamp01(1f - nx * nx);
+                    Color col = Color.Lerp(new Color(0.25f, 0.55f, 0.95f, alpha * 0.85f), new Color(0.75f, 0.90f, 1f, alpha), 1f - nx);
+                    for (int y = 0; y < h; y++)
+                    {
+                        pixels[y * w + x] = col;
+                    }
+                }
+
+                tex.SetPixels(pixels);
+                tex.Apply();
+                return tex;
             }
-        }
-
-        tex.SetPixels(pixels);
-        tex.Apply();
-
-        cachedDividerLineSprite = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 100f);
-        cachedDividerLineSprite.name = "ui_fgo_divider";
+        );
         return cachedDividerLineSprite;
     }
 }

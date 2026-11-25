@@ -13,7 +13,6 @@ using UnityEngine.UI;
 ///   * 스킬 아이콘을 어둡게 만들고, 아이콘 위에 남은 쿨타임 숫자를 표기
 ///   * 클릭 시 좌우로 진동(Shake)하도록 연출
 /// </summary>
-[ExecuteAlways]
 public class PlayerSkillUI : MonoBehaviour
 {
     [Header("연결된 대상 플레이어 유닛")]
@@ -72,7 +71,6 @@ public class PlayerSkillUI : MonoBehaviour
 
         EnsureUIHierarchy();
         BindButtonListeners();
-        UpdatePosition();
         RefreshSkillButtons();
     }
 
@@ -86,7 +84,6 @@ public class PlayerSkillUI : MonoBehaviour
     {
         EnsureUIHierarchy();
         BindButtonListeners();
-        UpdatePosition();
         RefreshSkillButtons();
     }
 
@@ -98,8 +95,6 @@ public class PlayerSkillUI : MonoBehaviour
                 Destroy(gameObject);
             return;
         }
-
-        UpdatePosition();
     }
 
     public void UpdatePosition()
@@ -496,73 +491,5 @@ public class PlayerSkillUI : MonoBehaviour
             spriteName,
             UIHelper.GetOrCreateSolidWhiteSprite()
         );
-    }
-}
-
-/// <summary>
-/// 개별 스킬 아이콘 버튼의 PointerEnter(호버 확대) / PointerExit(원래 크기 복귀) / PointerDown(축소) / PointerUp(스킬 확인창 표시 또는 쿨타임 진동) 이벤트를 전달합니다.
-/// </summary>
-public class SkillIconPointerReceiver : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IPointerExitHandler, IPointerEnterHandler
-{
-    public const float HoverScale = 1.18f;
-
-    private PlayerSkillUI ownerUI;
-    private ESkillType skillType;
-    private RectTransform targetRect;
-    private bool isPointerInside = false;
-    private bool isPressed = false;
-
-    public void Configure(PlayerSkillUI ui, ESkillType type, RectTransform rect)
-    {
-        ownerUI = ui;
-        skillType = type;
-        targetRect = rect;
-    }
-
-    public void OnPointerEnter(PointerEventData eventData)
-    {
-        isPointerInside = true;
-        if (!isPressed && targetRect != null)
-        {
-            targetRect.localScale = Vector3.one * HoverScale;
-        }
-    }
-
-    public void OnPointerExit(PointerEventData eventData)
-    {
-        isPointerInside = false;
-        if (targetRect != null)
-        {
-            targetRect.localScale = Vector3.one;
-        }
-    }
-
-    private void OnDisable()
-    {
-        isPointerInside = false;
-        isPressed = false;
-        if (targetRect != null)
-        {
-            targetRect.localScale = Vector3.one;
-        }
-    }
-
-    public void OnPointerDown(PointerEventData eventData)
-    {
-        if (eventData.button != PointerEventData.InputButton.Left) return;
-        isPressed = true;
-        isPointerInside = true;
-        if (ownerUI != null)
-            ownerUI.HandleSkillPointerDown(skillType, targetRect);
-    }
-
-    public void OnPointerUp(PointerEventData eventData)
-    {
-        if (eventData.button != PointerEventData.InputButton.Left) return;
-        if (!isPressed) return;
-        isPressed = false;
-
-        if (ownerUI != null)
-            ownerUI.HandleSkillPointerUp(skillType, targetRect, isPointerInside);
     }
 }
